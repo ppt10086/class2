@@ -2060,18 +2060,12 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
     <section id="page-overview"></section>
     <section id="page-ledger" hidden></section>
     <section id="page-analysis" hidden></section>
-    <section id="page-settings" hidden></section>
   </main>
 </div>
 
-<!-- 框架 init() 还会写入这几个节点，保留空占位以免抛错 -->
+<!-- 框架 init() 会写 #set-user（见上一行注释），保留它以免抛错。
+     用户中心已整体去掉，相关的 #prof-* 节点不再保留。 -->
 <span id="set-user" hidden></span>
-<span id="prof-backend" hidden></span>
-<span id="prof-user" hidden></span>
-<div id="prof-stats" hidden></div>
-<div id="prof-avatar" hidden></div>
-<input type="file" id="prof-avatar-file" hidden>
-<input type="file" id="import-file" hidden>
 
 <!-- 底栏（手机）：由 buildNav() 生成 -->
 <nav id="bottom-nav"></nav>
@@ -5170,54 +5164,20 @@ document.addEventListener('keydown', e => {
     document.getElementById("page-analysis").innerHTML = html;
   }
 
-  /* ---------------- 4. 设置（本机偏好 / 关于） ---------------- */
-  function renderSettings() {
-    var p = BF.prefs.read();
-    var html =
-      '<div class="topbar"><div><h1>设置</h1><div class="sub">外观、数据来源与本机缓存</div></div></div>';
-
-    html += UI.card("外观",
-      UI.kv("主题", '<select class="bf-select" id="pref-theme">' +
-        ["auto", "light", "dark"].map(function (v) {
-          var nm = v === "auto" ? "跟随系统" : v === "light" ? "浅色" : "深色";
-          return '<option value="' + v + '"' + ((p.theme || "auto") === v ? " selected" : "") + ">" + nm + "</option>";
-        }).join("") + "</select>") +
-      UI.kv("强调色", '<select class="bf-select" id="pref-accent">' +
-        Object.keys(ACCENTS).map(function (k) {
-          return '<option value="' + k + '"' + ((p.accent || "graphite") === k ? " selected" : "") + ">" + ACCENTS[k] + "</option>";
-        }).join("") + "</select>")
-    );
-
-    html += UI.card("数据来源",
-      UI.kv("云端", BF.cloud.online ? "已连接 Supabase" : "未连接（本机缓存模式）") +
-      UI.kv("分区键 site_id", esc(BF.CFG.site || "—")) +
-      UI.kv("本机记录", BF.records.length + " 笔") +
-      UI.kv("本机公告", BF.announces.length + " 条") +
-      '<div class="row" style="margin-top:14px;gap:8px;flex-wrap:wrap">' +
-      '<button class="btn btn-sm" id="pref-sync"><span class="ico" data-icon="refresh"></span>立即从云端同步</button>' +
-      '<button class="btn btn-sm" id="pref-clear"><span class="ico" data-icon="trash"></span>清除本机缓存</button>' +
-      "</div>" +
-      '<p class="muted small" style="margin-top:10px">清除本机缓存只会清空这台设备上的副本，' +
-      "云端数据不受影响，下次打开会重新拉取。</p>"
-    );
-
-    html += UI.card("关于",
-      UI.kv("班级", esc(BF.CLASS_NAME)) +
-      UI.kv("说明", "班费收支与班级公告公开可查，班委凭密码维护") +
-      UI.kv("界面框架", "StudyLens 前端框架（外壳 / 导航 / 动效 / 主题 / 自适应缩放）")
-    );
-
-    document.getElementById("page-settings").innerHTML = html;
-  }
-
-  /* ---------------- 挂到框架 PAGES ---------------- */
+  /* ---------------- 挂到框架 PAGES ----------------
+     导航由框架 buildNav() 按这里的记录自动生成，所以页面只在这里注册一次。
+     已按要求去掉「设置」页与「用户中心」：管理员登录、增删改的入口分布在
+     总览 / 明细 / 分析三页右上角。 */
   PAGES.overview = { label: "公示总览", icon: "grid", nav: true, render: renderOverview };
   PAGES.ledger = { label: "收支明细", icon: "list", nav: true, render: renderLedger };
   PAGES.analysis = { label: "收支分析", icon: "trend", nav: true, render: renderAnalysis };
-  PAGES.settings = { label: "设置", icon: "settings", nav: true, render: renderSettings };
+  /* 清掉框架自带的示例页与设置页、用户中心。
+     注意 PAGES.settings 是框架自己注册的（它自带 AppSettings），
+     我们不用它，必须显式删掉，否则侧栏会多出一个"设置"。 */
   delete PAGES.dashboard;
   delete PAGES.content;
   delete PAGES.profile;
+  delete PAGES.settings;
 
   /* ---------------- 交互 ---------------- */
   function refresh() {
@@ -5448,23 +5408,6 @@ document.addEventListener('keydown', e => {
   host.addEventListener("change", function (e) {
     var id = e.target && e.target.id;
     if (id === "ledger-cat") { ledgerFilter.cat = e.target.value; AppUI.rerender(); }
-    else if (id === "pref-theme") {
-      var p = BF.prefs.read(); p.theme = e.target.value; BF.prefs.write(p); applyTheme();
-      toast("主题已切换");
-    } else if (id === "pref-accent") {
-      var p2 = BF.prefs.read(); p2.accent = e.target.value; BF.prefs.write(p2); applyTheme();
-      toast("强调色已切换");
-    }
-  });
-
-  host.addEventListener("click", function (e) {
-    var id = e.target && e.target.id;
-    if (id === "pref-sync") { toast("正在同步…"); BF.pullCloud(true).then(refresh); }
-    else if (id === "pref-clear") {
-      try { localStorage.removeItem("class_fund_cache_v2"); localStorage.removeItem("class_fund_records"); } catch (err) {}
-      toast("本机缓存已清除，正在重新拉取…");
-      BF.pullCloud(true).then(refresh);
-    }
   });
 
   /* ---------------- 对外：当前页重绘 ---------------- */
