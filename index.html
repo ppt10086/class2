@@ -1911,9 +1911,20 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
  * 颜色一律用框架的中性变量，不新造配色。
  * ========================================================================== */
 
-/* 结余：整块大字 */
-.bf-balance{font-size:34px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums;
-  color:var(--text);line-height:1.15}
+/* 结余：整页视觉焦点 —— 大号、加粗、强调色。
+   用纯色而不是渐变裁切文字：渐变裁切依赖 -webkit-text-fill-color:transparent，
+   少数环境会把文字渲染成不可见，风险不值得换那点效果。 */
+.bf-balance{font-size:clamp(40px,9vw,62px);font-weight:800;letter-spacing:-1.5px;
+  line-height:1.05;color:var(--primary);font-variant-numeric:tabular-nums;
+  padding:6px 0 2px;word-break:keep-all}
+/* 结余所在卡片的标题也轻一点，避免与大字抢注意力 */
+.card:has(.bf-balance) .card-title{font-size:13.5px;letter-spacing:.3px;color:var(--muted)}
+
+/* 侧栏底部一行班级信息（不是用户中心，纯标识，不可点） */
+.bf-side-info{display:flex;flex-direction:column;gap:2px;padding:12px 10px 6px;
+  margin-top:auto;border-top:1px solid var(--line);pointer-events:none;user-select:none}
+.bf-side-info .un{font-size:12.5px;font-weight:700;color:var(--text);line-height:1.4}
+.bf-side-info .ut{font-size:11.5px;color:var(--muted);line-height:1.5}
 
 /* 账单行 */
 .bf-list{display:flex;flex-direction:column;gap:8px}
@@ -1945,14 +1956,27 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
   letter-spacing:.4px;margin:0 2px 8px}
 .bf-group-head::after{content:"";flex:1;height:1px;background:var(--line)}
 
-/* 公告 */
-.bf-anns{display:flex;flex-direction:column;gap:10px}
-.bf-ann{padding:14px 16px}
-.bf-ann .card-title{display:flex;align-items:center;gap:8px}
+/* 公告：做成显眼的提示块 —— 左侧强调色竖条 + 浅色底 + 醒目标题与标签 */
+.bf-ann-section{margin-bottom:18px}
+.bf-ann-head{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;
+  color:var(--text);margin:0 2px 12px}
+.bf-ann-bar{width:4px;height:16px;border-radius:2px;background:var(--primary);flex:0 0 4px}
+.bf-anns{display:flex;flex-direction:column;gap:12px}
+.bf-ann{position:relative;padding:15px 18px 15px 20px;border-radius:var(--radius);
+  border:1px solid var(--line);border-left:4px solid var(--primary);
+  background:var(--panel);box-shadow:var(--shadow-sm);
+  transition:border-color .2s ease,transform .2s ease}
+.bf-ann:hover{border-color:var(--line2);transform:translateY(-1px)}
+.bf-ann-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;
+  color:var(--text);line-height:1.4}
 .bf-ann-ops{margin-left:auto;display:flex;gap:4px}
 .bf-ann-ops .btn{padding:5px 7px}
 .bf-ann-ops .ico{width:15px;height:15px}
-.bf-ann-body{margin-top:8px;font-size:13px;line-height:1.85;color:var(--muted);white-space:pre-line}
+.bf-ann-body{margin-top:8px;font-size:13.5px;line-height:1.9;color:var(--text);
+  white-space:pre-line;opacity:.86}
+.bf-ann-tagrow{margin-top:11px}
+.bf-ann-tag{display:inline-block;font-size:11.5px;font-weight:700;padding:4px 12px;
+  border-radius:20px;background:var(--primary);color:var(--btn-fg);letter-spacing:.2px}
 
 /* 分类占比条 */
 .bf-cat{margin-bottom:14px}
@@ -2005,7 +2029,10 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 
 /* 窄屏：账单行改为两行排布，避免中间信息被压成一列 */
 @media (max-width:560px){
-  .bf-balance{font-size:28px}
+  .bf-balance{font-size:clamp(36px,11vw,48px);letter-spacing:-1px}
+  .bf-ann{padding:13px 15px 13px 17px;border-left-width:3px}
+  .bf-ann-title{font-size:14px}
+  .bf-ann-body{font-size:13px;line-height:1.85}
   .bf-li{flex-wrap:wrap;gap:8px 10px}
   .bf-li-main{flex:1 1 100%;order:2}
   .bf-li-main b,.bf-li-main span{white-space:normal}
@@ -2019,7 +2046,7 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
   .bf-tile-num{font-size:17px}
 }
 @media (max-width:380px){
-  .bf-balance{font-size:25px}
+  .bf-balance{font-size:clamp(32px,12vw,42px);letter-spacing:-.8px}
   .bf-li-side{padding-left:0}
 }
 </style>
@@ -2047,14 +2074,21 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
     <span class="ico" data-icon="menu"></span>
   </button>
 
-  <!-- 侧栏导航由 AppUI.buildNav() 按 PAGES 生成 -->
-  <aside class="sidebar" id="side-nav">
-    <div class="side-user" id="side-user-btn" style="cursor:default">
-      <span class="avatar" id="side-avatar">班</span>
-      <span class="su-txt"><span class="un" id="side-name">班级班费公示</span>
-      <span class="ut" id="side-role">2026级公共管理类本科2班</span></span>
-    </div>
-  </aside>
+  <!-- 侧栏导航由 AppUI.buildNav() 按 PAGES 生成。
+       注意：buildNav() 是 `side.innerHTML = 导航 + 分隔线` 全量重写，
+       只保留它认识的 .side-user 节点，所以侧栏底部那行班级信息不能用静态 HTML 写在这里
+       （会被清掉），改由启动层在导航生成之后追加。 -->
+  <aside class="sidebar" id="side-nav"></aside>
+
+  <!-- 框架 AppUI.init() 会无条件写这几个节点（且不在 try 里）：
+         #side-avatar / #side-name / #side-role / #set-user
+       而框架自己的 boot() 在解析期就调用了 init()，那时我们的启动层还没跑，
+       所以这些节点必须静态写在这里，不能靠 JS 后补 —— 缺一个就抛错、外壳不显示。
+       它们都不可见：只作为"占位"，真正的班级信息由启动层建到侧栏底部。 -->
+  <span id="side-avatar" hidden></span>
+  <span id="side-name" hidden></span>
+  <span id="side-role" hidden></span>
+  <span id="set-user" hidden></span>
 
   <main class="main" id="main-area">
     <section id="page-overview"></section>
@@ -2062,10 +2096,6 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
     <section id="page-analysis" hidden></section>
   </main>
 </div>
-
-<!-- 框架 init() 会写 #set-user（见上一行注释），保留它以免抛错。
-     用户中心已整体去掉，相关的 #prof-* 节点不再保留。 -->
-<span id="set-user" hidden></span>
 
 <!-- 底栏（手机）：由 buildNav() 生成 -->
 <nav id="bottom-nav"></nav>
@@ -4971,8 +5001,8 @@ document.addEventListener('keydown', e => {
   }
 
   function annCard(a, i) {
-    return '<div class="card bf-ann">' +
-      '<div class="card-title"><span class="dot"></span>' + esc(a.t) +
+    return '<div class="bf-ann">' +
+      '<div class="bf-ann-title">' + esc(a.t) +
       (BF.adminMode
         ? '<span class="bf-ann-ops">' +
           '<button class="btn btn-sm" data-ann="edit:' + i + '" title="编辑公告" aria-label="编辑公告">' +
@@ -4982,7 +5012,7 @@ document.addEventListener('keydown', e => {
         : "") +
       "</div>" +
       '<p class="bf-ann-body">' + esc(a.p) + "</p>" +
-      (a.tag ? '<div class="row" style="margin-top:10px"><span class="tag">' + esc(a.tag) + "</span></div>" : "") +
+      (a.tag ? '<div class="bf-ann-tagrow"><span class="bf-ann-tag">' + esc(a.tag) + "</span></div>" : "") +
       "</div>";
   }
 
@@ -5011,10 +5041,9 @@ document.addEventListener('keydown', e => {
       stateTag(BF.cloud.state, BF.cloud.msg) + adminSlot() + "</div></div>";
 
     /* 结余：无界并列数字行（框架组件） */
+    /* 结余：整页视觉焦点。下面那行「班级：… · 数据来源：…」小字按要求去掉。 */
     html += UI.card("班费当前结余",
       '<div class="bf-balance">¥' + BF.fmt(bal) + "</div>" +
-      '<div class="muted small" style="margin-top:6px">班级：' + esc(BF.CLASS_NAME) +
-      (BF.cloud.online ? " · 数据来源：云数据库实时公示" : " · 数据来源：本机缓存") + "</div>" +
       UI.statRow([[BF.fmt(inT), "累计收入"], [BF.fmt(outT), "累计支出"], [String(BF.records.length), "记录条数"]])
     );
 
@@ -5023,7 +5052,9 @@ document.addEventListener('keydown', e => {
       (has ? '<div class="bf-list">' + recent.map(liRow).join("") + "</div>"
            : UI.empty("暂无班费记录，等待管理员录入")) + "</div>";
 
-    html += '<div class="card"><div class="card-title"><span class="dot"></span>班级公告</div>' +
+    html += '<div class="bf-ann-section"><div class="bf-ann-head"><span class="bf-ann-bar"></span>班级公告' +
+      (BF.adminMode ? '<span class="muted small" style="margin-left:auto">点标题右侧可编辑</span>' : "") +
+      "</div>" +
       (BF.announces.length
         ? '<div class="bf-anns">' + BF.announces.map(annCard).join("") + "</div>"
         : UI.empty("暂无公告")) + "</div>";
@@ -5476,6 +5507,41 @@ document.addEventListener('keydown', e => {
   AppAuth.logout = function () { toast("本页为公开公示页，无需登录"); };
   AppAuth.showAuth = function () { /* 公开页：不显示登录页 */ };
 
+  /* ---- 1b. 侧栏底部那行班级信息 ----
+     框架的 buildNav() 是整段重写 #side-nav（`side.innerHTML = 导航 + 分隔线`），
+     静态写在 shell 里的节点会被清掉，所以改为在它跑完之后追加。
+     这行不是按钮：没有点击行为、pointer-events:none，只是班级标识，
+     不承担"用户中心"的角色。
+     同时把 #side-name/#side-role 的 textContent 设为只读，
+     免得框架 AppUI.init() 把它们改成「用户中心 / 访客」。 */
+  function mountSideInfo() {
+    var side = document.getElementById("side-nav");
+    if (!side || side.querySelector(".bf-side-info")) return;
+    var row = document.createElement("div");
+    row.className = "side-foot bf-side-info";
+    side.appendChild(row);
+    /* 把 shell 里那对占位 span 直接搬进来用（避免出现重复 id），
+       并把它们的文本固定成班级信息。 */
+    var nm = document.getElementById("side-name");
+    var role = document.getElementById("side-role");
+    if (nm) { nm.hidden = false; nm.textContent = "班级班费公示"; row.appendChild(nm); }
+    if (role) { role.hidden = false; role.textContent = BF.CLASS_NAME; row.appendChild(role); }
+    /* 这两个节点由我们掌控，禁止框架覆写成「用户中心 / 访客」 */
+    try {
+      var D = Object.getOwnPropertyDescriptor(Element.prototype, "textContent");
+      if (D && D.get && D.set) {
+        [nm, role].forEach(function (el) {
+          if (!el) return;
+          Object.defineProperty(el, "textContent", {
+            configurable: true,
+            get: function () { return D.get.call(this); },
+            set: function () { /* 保留班级信息 */ }
+          });
+        });
+      }
+    } catch (e) {}
+  }
+
   /* ---- 2. 关掉「断网拦截层」 ----
      本页数据走 Supabase REST（不走框架的 sl_* RPC），Net 的探测与我们无关；
      断网时本机缓存照常可看，不该被全屏拦截层挡住。 */
@@ -5488,11 +5554,19 @@ document.addEventListener('keydown', e => {
 
   /* ---- 3. 启动 ---- */
   function start() {
+    /* 进站优先显示「公示总览」：只在地址栏没有指定页面时才这样，
+       这样 #/ledger 这类深链仍然可用。 */
+    try {
+      var hashPage = (location.hash || "").replace(/^#\/?/, "");
+      if (!hashPage) AppUI.page = "overview";
+    } catch (e) {}
     try {
       AppUI.init();
     } catch (e) {
       try { console.warn("[班费] 外壳初始化失败", e); } catch (_) {}
     }
+    /* 导航生成之后再挂侧栏底部那行班级信息（buildNav 会整段重写 #side-nav） */
+    try { mountSideInfo(); } catch (e) {}
     /* 数据层：先用本机缓存渲染（离线可看），再拉云端并在回来后刷新当前页 */
     try { BF.boot(); } catch (e) { console.warn("[班费] 数据层启动失败", e); }
     try { window.__bfRefresh(); } catch (e) {}
