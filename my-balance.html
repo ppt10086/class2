@@ -1909,6 +1909,32 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
  * 颜色一律用框架的中性变量，不新造配色。
  * ========================================================================== */
 
+/* 个人余额查询入口：放在正文里的醒目卡片。
+   手机上没有侧栏可取（是抽屉），所以入口必须在页面上直接可见。 */
+.bf-mybal-entry{display:flex;align-items:center;gap:14px;margin-bottom:16px;
+  padding:16px 18px;border-radius:var(--radius);text-decoration:none;
+  border:1px solid var(--line);border-left:4px solid var(--primary);
+  background:var(--panel);box-shadow:var(--shadow-sm);
+  transition:border-color .2s ease, transform .2s ease, background .2s ease}
+.bf-mybal-entry:hover{border-color:var(--line2);transform:translateY(-1px);background:var(--panel2)}
+.bf-mybal-entry:active{transform:translateY(0)}
+.bf-mbe-ico{flex:0 0 42px;width:42px;height:42px;border-radius:12px;display:flex;
+  align-items:center;justify-content:center;background:var(--primary);color:var(--btn-fg)}
+.bf-mbe-ico .ico{width:22px;height:22px}
+.bf-mbe-txt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+.bf-mbe-txt b{font-size:15px;font-weight:700;color:var(--text);line-height:1.35}
+.bf-mbe-txt i{font-style:normal;font-size:12.5px;color:var(--muted);line-height:1.5}
+.bf-mbe-go{flex:0 0 auto;color:var(--muted);display:flex;align-items:center}
+.bf-mbe-go .ico{width:18px;height:18px}
+@media (max-width:560px){
+  .bf-mybal-entry{gap:11px;padding:14px 15px;border-left-width:3px;margin-bottom:13px}
+  .bf-mbe-ico{flex:0 0 36px;width:36px;height:36px;border-radius:10px}
+  .bf-mbe-ico .ico{width:19px;height:19px}
+  .bf-mbe-txt b{font-size:14px}
+  .bf-mbe-txt i{font-size:12px}
+  .bf-mbe-go{display:none}
+}
+
 /* 结余：整页视觉焦点 —— 大号、加粗、强调色。
    用纯色而不是渐变裁切文字：渐变裁切依赖 -webkit-text-fill-color:transparent，
    少数环境会把文字渲染成不可见，风险不值得换那点效果。 */
@@ -2116,6 +2142,12 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 }
 @media (max-width:420px){
   .adm-ops .btn{padding:6px 9px}
+}
+/* 返回班费公示：移动端也要好点 */
+.bf-back{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex:0 0 auto}
+.bf-back .ico{width:15px;height:15px}
+@media (max-width:560px){
+  .bf-back{padding:6px 10px;font-size:12.5px}
 }
 
 </style>
@@ -4724,11 +4756,19 @@ document.addEventListener('keydown', e => {
     });
   }
 
+  /* 返回班费公示的链接：每个状态（含云端不可用的兜底页）都要有，
+     否则同学进来只会看到一个错误提示、退不出去。 */
+  function backLink() {
+    return '<a class="btn btn-sm bf-back" href="index.html">' +
+      '<span class="ico" data-icon="chevLeft"></span>班费公示</a>';
+  }
+
   /* ---------- 登录 ---------- */
   function renderLogin(msg) {
     host.innerHTML =
       '<div class="topbar"><div><h1>个人余额查询</h1>' +
-      '<div class="sub">输入姓名与密码，查看本人在班费中的余额</div></div></div>' +
+      '<div class="sub">输入姓名与密码，查看本人在班费中的余额</div></div>' +
+      backLink() + "</div>" +
       '<div class="card bf-login-card">' +
         '<div class="card-title"><span class="dot"></span>登录</div>' +
         '<div class="field"><label for="su-name">姓名</label>' +
@@ -4738,7 +4778,8 @@ document.addEventListener('keydown', e => {
         'placeholder="初始密码 123456" enterkeyhint="go"></div>' +
         '<div id="su-err" class="auth-err" style="min-height:20px">' + (msg ? esc(msg) : "") + "</div>" +
         '<button class="btn btn-primary btn-lg" id="su-go" style="width:100%">登录查看</button>' +
-        '<p class="muted small" style="margin-top:14px;line-height:1.85">' +
+        '<div id="su-hint" class="muted small" style="min-height:17px;margin-top:9px;text-align:center"></div>' +
+        '<p class="muted small" style="margin-top:12px;line-height:1.85">' +
         "· 姓名与班级名单一致，注意不要多打空格<br>" +
         "· 初始密码为 <b>123456</b>，建议首次登录后自行修改<br>" +
         "· 查不到或提示密码不符，请联系生活权益委员核实</p>" +
@@ -4750,7 +4791,7 @@ document.addEventListener('keydown', e => {
         "本页只显示你自己的余额，其他人的余额不会展示。</p>" +
       "</div>";
 
-    var nameI = el("su-name"), passI = el("su-pass"), btn = el("su-go");
+    var nameI = el("su-name"), passI = el("su-pass"), btn = el("su-go"), hint = el("su-hint");
     function submit() {
       var u = (nameI.value || "").trim();
       var p = passI.value || "";
@@ -4760,8 +4801,11 @@ document.addEventListener('keydown', e => {
       if (!window.BFU.online()) { err.textContent = "云端未配置，请联系班委"; return; }
       err.textContent = "";
       btn.disabled = true; btn.textContent = "查询中…";
+      /* 手机网络慢时这一步可能要 1~2 秒，给个明确的进行中提示，避免以为卡住 */
+      if (hint) hint.textContent = "正在连接云端查询，请稍候…";
       window.BFU.studentLogin(u, p).then(function (r) {
         btn.disabled = false; btn.textContent = "登录查看";
+        if (hint) hint.textContent = "";
         if (!r || r.ok !== true) {
           err.textContent = "姓名或密码不正确";
           passI.select();
@@ -4773,6 +4817,7 @@ document.addEventListener('keydown', e => {
         renderBalance();
       }).catch(function (e) {
         btn.disabled = false; btn.textContent = "登录查看";
+        if (hint) hint.textContent = "";
         err.textContent = "查询失败：" + (e.message || e) + "（检查网络后重试）";
       });
     }
@@ -4792,7 +4837,7 @@ document.addEventListener('keydown', e => {
       '<div class="topbar"><div><h1>我的班费余额</h1>' +
       '<div class="sub">' + esc(current.username) + " · 数据来自云端</div></div>" +
       '<div class="row" style="gap:8px;align-items:center">' +
-        '<span class="tag tag-green">已登录</span>' +
+        backLink() +
         '<button class="btn btn-sm" id="su-refresh"><span class="ico" data-icon="refresh"></span>刷新</button>' +
         '<button class="btn btn-sm" id="su-logout"><span class="ico" data-icon="logout"></span>退出</button>' +
       "</div></div>" +
@@ -4891,8 +4936,14 @@ document.addEventListener('keydown', e => {
   function boot() {
     window.BFU.readCfg();
     if (!window.BFU.online()) {
-      host.innerHTML = '<div class="card">' +
-        UI.empty("云端未配置，暂时无法查询余额，请联系班委") + "</div>";
+      /* 兜底页也要给返回入口，不能让同学卡在这里 */
+      host.innerHTML =
+        '<div class="topbar"><div><h1>个人余额查询</h1>' +
+        '<div class="sub">暂时不可用</div></div>' + backLink() + "</div>" +
+        '<div class="card">' +
+        UI.empty("云端暂时不可用，无法查询余额，请联系班委") +
+        '<p class="muted small" style="text-align:center;margin-top:10px;line-height:1.8">' +
+        "也可以先回班费公示页查看班级收支情况。</p></div>";
     } else {
       renderLogin();
     }
