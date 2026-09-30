@@ -1909,6 +1909,32 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
  * 颜色一律用框架的中性变量，不新造配色。
  * ========================================================================== */
 
+/* 个人余额查询入口：放在正文里的醒目卡片。
+   手机上没有侧栏可取（是抽屉），所以入口必须在页面上直接可见。 */
+.bf-mybal-entry{display:flex;align-items:center;gap:14px;margin-bottom:16px;
+  padding:16px 18px;border-radius:var(--radius);text-decoration:none;
+  border:1px solid var(--line);border-left:4px solid var(--primary);
+  background:var(--panel);box-shadow:var(--shadow-sm);
+  transition:border-color .2s ease, transform .2s ease, background .2s ease}
+.bf-mybal-entry:hover{border-color:var(--line2);transform:translateY(-1px);background:var(--panel2)}
+.bf-mybal-entry:active{transform:translateY(0)}
+.bf-mbe-ico{flex:0 0 42px;width:42px;height:42px;border-radius:12px;display:flex;
+  align-items:center;justify-content:center;background:var(--primary);color:var(--btn-fg)}
+.bf-mbe-ico .ico{width:22px;height:22px}
+.bf-mbe-txt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+.bf-mbe-txt b{font-size:15px;font-weight:700;color:var(--text);line-height:1.35}
+.bf-mbe-txt i{font-style:normal;font-size:12.5px;color:var(--muted);line-height:1.5}
+.bf-mbe-go{flex:0 0 auto;color:var(--muted);display:flex;align-items:center}
+.bf-mbe-go .ico{width:18px;height:18px}
+@media (max-width:560px){
+  .bf-mybal-entry{gap:11px;padding:14px 15px;border-left-width:3px;margin-bottom:13px}
+  .bf-mbe-ico{flex:0 0 36px;width:36px;height:36px;border-radius:10px}
+  .bf-mbe-ico .ico{width:19px;height:19px}
+  .bf-mbe-txt b{font-size:14px}
+  .bf-mbe-txt i{font-size:12px}
+  .bf-mbe-go{display:none}
+}
+
 /* 结余：整页视觉焦点 —— 大号、加粗、强调色。
    用纯色而不是渐变裁切文字：渐变裁切依赖 -webkit-text-fill-color:transparent，
    少数环境会把文字渲染成不可见，风险不值得换那点效果。 */
@@ -2116,6 +2142,12 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 }
 @media (max-width:420px){
   .adm-ops .btn{padding:6px 9px}
+}
+/* 返回班费公示：移动端也要好点 */
+.bf-back{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex:0 0 auto}
+.bf-back .ico{width:15px;height:15px}
+@media (max-width:560px){
+  .bf-back{padding:6px 10px;font-size:12.5px}
 }
 
 </style>
@@ -5120,6 +5152,16 @@ document.addEventListener('keydown', e => {
       '<div class="sub">' + esc(BF.CLASS_NAME) + " · 班级班费收支与结余一览</div></div>" +
       '<div class="row" style="gap:8px;align-items:center">' +
       stateTag(BF.cloud.state, BF.cloud.msg) + adminSlot() + "</div></div>";
+
+    /* 个人余额入口：醒目卡片。
+       必须放在页面正文里 —— 手机上侧栏是抽屉、底栏也不放外链，
+       只靠侧栏那个链接的话手机上根本找不到入口。 */
+    html += '<a class="bf-mybal-entry" href="my-balance.html">' +
+      '<span class="bf-mbe-ico"><span class="ico" data-icon="user"></span></span>' +
+      '<span class="bf-mbe-txt"><b>个人余额查询</b>' +
+      '<i>输入姓名与密码，查看本人在班费中的余额</i></span>' +
+      '<span class="bf-mbe-go"><span class="ico" data-icon="chevRight"></span></span>' +
+      "</a>";
 
     /* 结余：无界并列数字行（框架组件） */
     /* 结余：整页视觉焦点。下面那行「班级：… · 数据来源：…」小字按要求去掉。 */
