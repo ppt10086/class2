@@ -5291,6 +5291,22 @@ document.addEventListener('keydown', e => {
   delete PAGES.profile;
   delete PAGES.settings;
 
+  /* ---------------- 侧栏附加入口：个人余额查询 ----------------
+     它不是本站的页面（是同一个站点下的另一个文件 my-balance.html），
+     所以不能用 PAGES 注册（那样会被当成页面切换），只能挂一个外链按钮。 */
+  function mountBalanceLink() {
+    var side = document.getElementById("side-nav");
+    if (!side || side.querySelector(".bf-ext-link")) return;
+    var user = side.querySelector(".side-user");
+    var a = document.createElement("a");
+    a.className = "nav-btn bf-ext-link";
+    a.href = "my-balance.html";
+    a.innerHTML = '<span class="ico" data-icon="user"></span>个人余额查询';
+    if (user) side.insertBefore(a, user); else side.appendChild(a);
+    try { AppUI.decorate(); } catch (e) {}
+  }
+  window.__bfMountBalanceLink = mountBalanceLink;
+
   /* ---------------- 交互 ---------------- */
   function refresh() {
     if (typeof window.__bfRefresh === "function") window.__bfRefresh();
@@ -5648,6 +5664,8 @@ document.addEventListener('keydown', e => {
     }
     /* 导航生成之后再挂侧栏底部那行班级信息（buildNav 会整段重写 #side-nav） */
     try { mountSideInfo(); } catch (e) {}
+    /* 侧栏再加一个「个人余额查询」外链（指向同站点的 my-balance.html） */
+    try { if (typeof window.__bfMountBalanceLink === 'function') window.__bfMountBalanceLink(); } catch (e) {}
     /* 数据层：先用本机缓存渲染（离线可看），再拉云端并在回来后刷新当前页 */
     try { BF.boot(); } catch (e) { console.warn("[班费] 数据层启动失败", e); }
     try { window.__bfRefresh(); } catch (e) {}
