@@ -7,7 +7,6 @@
 <meta name="theme-color" content="#eeeef1">
 <meta name="color-scheme" content="light dark">
 <meta name="description" content="班级班费收支与班级公告公开公示，班委凭密码维护。">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23e8e8eb'/%3E%3Cpath d='M9 9h9l5 5v9a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V11a2 2 0 0 1 2-2z' fill='%232f2f38'/%3E%3C/svg%3E">
 </head>
 <body>
 
@@ -1902,7 +1901,6 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 /* ===== 你的样式（从这里往下随便写） ===== */
 
 </style>
-
 <!-- ============ 本页补充样式 ============ -->
 <style>
 /* ==========================================================================
@@ -2049,7 +2047,80 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
   .bf-balance{font-size:clamp(32px,12vw,42px);letter-spacing:-.8px}
   .bf-li-side{padding-left:0}
 }
+
+/* ==========================================================================
+ * 个人余额 · 页面样式（学生端 + 管理页共用）
+ * 配色一律沿用框架的中性变量，不另造色。
+ * ========================================================================== */
+
+/* 登录卡片宽度收敛，避免在大屏上拉成一条 */
+.bf-login-card{max-width:460px}
+
+/* 余额：整页焦点 */
+.bf-mycard{position:relative;overflow:hidden}
+.bf-mybal{font-size:clamp(44px,10vw,68px);font-weight:800;letter-spacing:-1.8px;
+  line-height:1.05;color:var(--primary);font-variant-numeric:tabular-nums;padding:6px 0 2px}
+.bf-mybal.pos{color:var(--yes)}
+.bf-mybal.neg{color:var(--no)}
+.bf-mybal-sub{font-size:13px;font-weight:600;color:var(--muted);margin-top:2px}
+.bf-note{margin-top:12px;padding:10px 13px;border-radius:var(--radius-sm);
+  background:var(--panel3);border:1px dashed var(--line);font-size:12.5px;
+  color:var(--muted);line-height:1.8}
+
+/* ---------------- 管理页 ---------------- */
+.adm-msg{padding:12px 16px;font-size:12.5px;color:var(--muted);
+  border-style:dashed;margin-bottom:14px}
+
+.adm-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.adm-search{display:flex;align-items:center;gap:8px;flex:1 1 200px;min-width:0;padding:8px 12px;
+  border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel3);color:var(--muted)}
+.adm-search .ico{width:16px;height:16px;flex:0 0 16px}
+.adm-search input{border:none;background:transparent;outline:none;color:var(--text);
+  font:inherit;font-size:13px;width:100%;min-width:0}
+.adm-select{padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--panel3);color:var(--text);font:inherit;font-size:12.5px;cursor:pointer}
+
+.adm-head,.adm-row{display:grid;grid-template-columns:1.1fr .9fr 1fr 1.9fr;
+  gap:10px;align-items:center}
+.adm-head{padding:0 12px 8px;font-size:11.5px;font-weight:600;color:var(--muted);
+  letter-spacing:.3px;border-bottom:1px solid var(--line)}
+.adm-list{display:flex;flex-direction:column}
+.adm-row{padding:10px 12px;border-bottom:1px solid var(--line);
+  transition:background .15s ease}
+.adm-row:last-child{border-bottom:none}
+.adm-row:hover{background:var(--panel3)}
+.adm-name{font-size:13.5px;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adm-bal{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.adm-bal.pos{color:var(--yes)}
+.adm-bal.neg{color:var(--no)}
+.adm-bal.zero{color:var(--muted)}
+.adm-time{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adm-ops{display:flex;align-items:center;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.adm-input{width:92px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;
+  background:var(--panel3);color:var(--text);font:inherit;font-size:12.5px;outline:none}
+.adm-input:focus{border-color:var(--line2)}
+
+/* 窄屏：列表改为两行卡式，避免列挤成一列文字 */
+@media (max-width:760px){
+  .adm-head{display:none}
+  .adm-row{grid-template-columns:1fr auto;grid-template-areas:"name bal" "time time" "ops ops";
+    row-gap:6px;padding:13px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+    margin-bottom:8px}
+  .adm-name{grid-area:name}
+  .adm-bal{grid-area:bal;text-align:right}
+  .adm-time{grid-area:time;font-size:11px}
+  .adm-ops{grid-area:ops;justify-content:flex-start;padding-top:4px}
+  .adm-input{flex:1 1 100px;width:auto}
+  .bf-login-card{max-width:none}
+}
+@media (max-width:420px){
+  .adm-ops .btn{padding:6px 9px}
+}
+
 </style>
+
+<!-- ============ 外壳标记（必须在脚本之前） ============ -->
 <!-- 断网拦截层：本页为公开公示页，数据走本机缓存 + REST，默认不拦。
      保留该节点是因为框架的 Net 模块会引用它。 -->
 <div id="net-gate" class="net-gate" hidden>
@@ -2103,7 +2174,7 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 <div id="toast-wrap" role="status" aria-live="polite"></div>
 <div id="modal-root"></div>
 
-<!-- ============ 框架脚本（StudyLens，原封不动） ============ -->
+<!-- ============ 框架脚本 ============ -->
 <script>
 
 "use strict";
@@ -4106,10 +4177,14 @@ const AppUI = {
     this.applySide();
     applyTheme();
     applyScale();
-    $('#side-avatar').textContent = (AppAuth.displayLabel()[0] || '?').toUpperCase();
-    $('#side-name').textContent = AppAuth.displayLabel();
-    $('#side-role').textContent = '用户中心';
-    $('#set-user').textContent = AppAuth.displayName();
+    /* 本项目外壳会在 buildNav() 中重写侧栏，这几个节点可能不存在，
+       原框架是无条件赋值，会因 null 抛错并中断 init()。 */
+    (function(){
+      const a = $('#side-avatar'); if(a) a.textContent = (AppAuth.displayLabel()[0] || '?').toUpperCase();
+      const n = $('#side-name');   if(n) n.textContent = AppAuth.displayLabel();
+      const r = $('#side-role');   if(r) r.textContent = '用户中心';
+      const u = $('#set-user');    if(u) u.textContent = AppAuth.displayName();
+    })();
     AppProfile.paintAvatar();
     applyPrefsToUI();
     try{ this.go(this.page); }catch(e){ showFatal(e && e.message ? e.message : String(e)); }
@@ -4377,7 +4452,13 @@ document.addEventListener('keydown', e => {
     if(st) st.addEventListener('click', () => AppUI.toggleSide());
     const acctBtn = document.getElementById('set-logout');
     if(acctBtn) acctBtn.addEventListener('click', () => AppAuth.logout());
-    if(AppAuth.current()) AppUI.init(); else AppAuth.showAuth();
+    /* 等 DOM 就绪再进主界面：解析期直接调用会因为取不到壳内节点而抛错。 */
+    const go = function(){
+      try{ if(AppAuth.current()) AppUI.init(); else AppAuth.showAuth(); }
+      catch(e){ showFatal(e && e.message ? e.message : String(e)); }
+    };
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
+    else go();
   }catch(e){ showFatal(e && e.message ? e.message : String(e)); }
 })();
 
@@ -5588,7 +5669,6 @@ document.addEventListener('keydown', e => {
 
 </script>
 
-</script>
 
 <!-- deployed-by-html2github site_id=class2 -->
 <script>
