@@ -2149,6 +2149,73 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 @media (max-width:560px){
   .bf-back{padding:6px 10px;font-size:12.5px}
 }
+/* ---------------- 分摊面板 ---------------- */
+.alloc-list{display:flex;flex-direction:column;gap:9px}
+.alloc-row{border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--panel3);
+  overflow:hidden;transition:border-color .18s ease}
+.alloc-row.open{border-color:var(--line2)}
+.alloc-head{display:flex;align-items:center;gap:10px;padding:11px 13px;flex-wrap:wrap}
+.alloc-tag{flex:0 0 auto;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:20px}
+.alloc-tag.in{background:var(--primary);color:var(--btn-fg)}
+.alloc-tag.out{background:var(--panel2);color:var(--text);border:1px solid var(--line2)}
+.alloc-name{font-size:13.5px;font-weight:600;color:var(--text);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 120px}
+.alloc-amt{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
+.alloc-info{font-size:12px;color:var(--muted);white-space:nowrap}
+.alloc-pick{border-top:1px solid var(--line);padding:11px 13px;background:var(--panel)}
+.alloc-pick-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.alloc-people{display:flex;flex-wrap:wrap;gap:6px}
+.alloc-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;
+  border:1px solid var(--line);background:var(--panel3);font-size:12.5px;color:var(--muted);
+  cursor:pointer;user-select:none;transition:all .15s ease}
+.alloc-chip.on{background:var(--primary);border-color:var(--primary);color:var(--btn-fg);font-weight:600}
+.alloc-chip input{width:0;height:0;opacity:0;position:absolute;pointer-events:none}
+@media (max-width:760px){
+  .alloc-head{gap:7px;padding:10px 11px}
+  .alloc-name{flex:1 1 100%}
+  .alloc-info{margin-left:auto}
+  .alloc-chip{padding:6px 11px;font-size:12px}
+}
+/* ---------------- 个人余额 · 收支详情 ---------------- */
+.bf-mystats{display:flex;gap:0;margin-top:16px;border-top:1px solid var(--line);
+  padding-top:14px}
+.bf-mstat{flex:1 1 0;display:flex;flex-direction:column;gap:3px;min-width:0;
+  padding:0 10px;border-right:1px solid var(--line)}
+.bf-mstat:last-child{border-right:none}
+.bf-mstat b{font-size:17px;font-weight:800;color:var(--text);
+  font-variant-numeric:tabular-nums;line-height:1.2}
+.bf-mstat span{font-size:11.5px;color:var(--muted);line-height:1.4}
+
+.bf-detail .card-title{margin-bottom:12px}
+.bf-d-group{margin-bottom:16px}
+.bf-d-group:last-of-type{margin-bottom:6px}
+.bf-d-date{display:flex;align-items:center;font-size:12px;font-weight:700;
+  color:var(--muted);letter-spacing:.3px;padding:0 2px 8px;
+  border-bottom:1px solid var(--line);margin-bottom:2px}
+.bf-d-sum{margin-left:auto;font-variant-numeric:tabular-nums}
+.bf-d-row{display:flex;align-items:center;gap:11px;padding:11px 2px;
+  border-bottom:1px dashed var(--line)}
+.bf-d-row:last-child{border-bottom:none}
+.bf-d-dot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;margin-top:2px}
+.bf-d-dot.in{background:var(--yes)}
+.bf-d-dot.out{background:var(--no)}
+.bf-d-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px}
+.bf-d-main b{font-size:13.5px;font-weight:650;color:var(--text);line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bf-d-main i{font-style:normal;font-size:11.5px;color:var(--muted);line-height:1.45}
+.bf-d-amt{flex:0 0 auto;font-size:14.5px;font-weight:800;font-variant-numeric:tabular-nums;
+  white-space:nowrap}
+.bf-d-amt.in,.bf-d-sum.in{color:var(--yes)}
+.bf-d-amt.out,.bf-d-sum.out{color:var(--no)}
+@media (max-width:560px){
+  .bf-mystats{margin-top:13px;padding-top:12px}
+  .bf-mstat{padding:0 7px}
+  .bf-mstat b{font-size:15px}
+  .bf-mstat span{font-size:11px}
+  .bf-d-row{gap:9px;padding:10px 2px}
+  .bf-d-main b{font-size:13px}
+  .bf-d-amt{font-size:14px}
+}
 
 </style>
 
@@ -4556,6 +4623,9 @@ document.addEventListener('keydown', e => {
     studentLogin: function (username, password) {
       return rpc("bf_student_login", { p_username: String(username || "").trim(), p_password: String(password || "") });
     },
+    studentDetail: function (username, password) {
+      return rpc("bf_student_detail", { p_username: String(username || "").trim(), p_password: String(password || "") });
+    },
     studentChangePassword: function (username, oldPwd, newPwd) {
       return rpc("bf_student_change_password",
         { p_username: username, p_old_password: String(oldPwd || ""), p_new_password: String(newPwd || "") });
@@ -4748,6 +4818,7 @@ document.addEventListener('keydown', e => {
   var host = document.getElementById("main-area");
   var current = null;      /* {username, balance, note, updated_at} */
   var lastPwd = "";        /* 仅存在内存里，供"刷新"按钮复用；关掉标签页即消失 */
+  var detail = [];         /* 收支明细 */
 
   function el(id) { return document.getElementById(id); }
   function esc(s) {
@@ -4803,7 +4874,7 @@ document.addEventListener('keydown', e => {
       btn.disabled = true; btn.textContent = "查询中…";
       /* 手机网络慢时这一步可能要 1~2 秒，给个明确的进行中提示，避免以为卡住 */
       if (hint) hint.textContent = "正在连接云端查询，请稍候…";
-      window.BFU.studentLogin(u, p).then(function (r) {
+      window.BFU.studentDetail(u, p).then(function (r) {
         btn.disabled = false; btn.textContent = "登录查看";
         if (hint) hint.textContent = "";
         if (!r || r.ok !== true) {
@@ -4812,6 +4883,7 @@ document.addEventListener('keydown', e => {
           return;
         }
         current = r;
+        detail = r.items || [];
         lastPwd = p;
         toast("登录成功，欢迎 " + r.username);
         renderBalance();
@@ -4832,6 +4904,8 @@ document.addEventListener('keydown', e => {
   function renderBalance() {
     if (!current) { renderLogin(); return; }
     var bal = Number(current.balance) || 0;
+    var paid = Number(current.paid) || 0;
+    var spent = Number(current.spent) || 0;
     var cls = bal > 0 ? "pos" : (bal < 0 ? "neg" : "");
     host.innerHTML =
       '<div class="topbar"><div><h1>我的班费余额</h1>' +
@@ -4846,18 +4920,15 @@ document.addEventListener('keydown', e => {
         '<div class="card-title"><span class="dot"></span>当前余额</div>' +
         '<div class="bf-mybal ' + cls + '">¥' + window.BFU.fmtMoney(bal) + "</div>" +
         '<div class="bf-mybal-sub">' + esc(current.username) + "</div>" +
+        '<div class="bf-mystats">' +
+          '<div class="bf-mstat"><b>¥' + window.BFU.fmtMoney(paid) + "</b><span>累计缴纳</span></div>" +
+          '<div class="bf-mstat"><b>¥' + window.BFU.fmtMoney(spent) + "</b><span>累计分摊</span></div>" +
+          '<div class="bf-mstat"><b>' + detail.length + "</b><span>收支笔数</span></div>" +
+        "</div>" +
         (current.note ? '<div class="bf-note">' + esc(current.note) + "</div>" : "") +
       "</div>" +
 
-      '<div class="card">' +
-        '<div class="card-title"><span class="dot"></span>说明</div>' +
-        '<div class="kv"><span class="kk">上次更新</span><span class="vv">' +
-          esc(window.BFU.fmtTime(current.updated_at)) + "</span></div>" +
-        '<div class="kv"><span class="kk">余额含义</span><span class="vv">' +
-          "已缴纳班费减去为你支出的部分，正数表示结余</span></div>" +
-        '<p class="muted small" style="margin-top:12px;line-height:1.85">' +
-          "如对金额有疑问，请联系生活权益委员核对。</p>" +
-      "</div>" +
+      detailCardHtml() +
 
       '<div class="card">' +
         '<div class="card-title"><span class="dot"></span>修改密码</div>' +
@@ -4877,10 +4948,14 @@ document.addEventListener('keydown', e => {
     if (rf) rf.addEventListener("click", function () {
       if (!lastPwd) { current = null; renderLogin("请重新输入密码"); return; }
       rf.disabled = true; rf.textContent = "刷新中…";
-      window.BFU.studentLogin(current.username, lastPwd).then(function (r) {
+      window.BFU.studentDetail(current.username, lastPwd).then(function (r) {
         rf.disabled = false; rf.innerHTML = '<span class="ico" data-icon="refresh"></span>刷新';
-        if (r && r.ok === true) { current = r; renderBalance(); toast("余额已更新"); }
-        else { current = null; renderLogin("登录状态已失效，请重新输入密码"); }
+        if (r && r.ok === true) {
+          current = r; detail = r.items || [];
+          renderBalance(); toast("余额已更新");
+        } else {
+          current = null; renderLogin("登录状态已失效，请重新输入密码");
+        }
       }).catch(function (e) {
         rf.disabled = false; rf.innerHTML = '<span class="ico" data-icon="refresh"></span>刷新';
         toast("刷新失败：" + (e.message || e));
@@ -4888,7 +4963,7 @@ document.addEventListener('keydown', e => {
     });
     var lo = el("su-logout");
     if (lo) lo.addEventListener("click", function () {
-      current = null; lastPwd = "";
+      current = null; lastPwd = ""; detail = [];
       toast("已退出");
       renderLogin();
     });
@@ -4904,6 +4979,56 @@ document.addEventListener('keydown', e => {
         big.style.opacity = "1"; big.style.transform = "none";
       });
     }
+  }
+
+  /* ---------- 收支详情 ---------- */
+  function detailCardHtml() {
+    if (!detail.length) {
+      return '<div class="card bf-detail"><div class="card-title"><span class="dot"></span>收支详情</div>' +
+        UI.empty("暂时没有收支记录") +
+        '<p class="muted small" style="text-align:center;margin-top:8px">' +
+        "班委记入后会显示在这里</p></div>";
+    }
+    /* 按日期分组，最新在上 */
+    var groups = {};
+    detail.forEach(function (d) {
+      var k = d.date || "未标注日期";
+      (groups[k] = groups[k] || []).push(d);
+    });
+    var keys = Object.keys(groups).sort().reverse();
+
+    var body = keys.map(function (k) {
+      var rowsHtml = groups[k].map(function (d) {
+        var isIn = d.kind === "income";
+        return '<div class="bf-d-row">' +
+          '<span class="bf-d-dot ' + (isIn ? "in" : "out") + '"></span>' +
+          '<span class="bf-d-main">' +
+            '<b>' + esc(d.item) + "</b>" +
+            '<i>' + (isIn ? "缴纳" : "分摊支出") +
+              (d.total ? " · 全班合计 ¥" + window.BFU.fmtMoney(d.total) : "") + "</i>" +
+          "</span>" +
+          '<span class="bf-d-amt ' + (isIn ? "in" : "out") + '">' +
+            (isIn ? "+" : "−") + "¥" + window.BFU.fmtMoney(d.amount) + "</span>" +
+        "</div>";
+      }).join("");
+      var sum = groups[k].reduce(function (a, d) {
+        return a + (d.kind === "income" ? Number(d.amount) : -Number(d.amount));
+      }, 0);
+      return '<div class="bf-d-group">' +
+        '<div class="bf-d-date">' + esc(k) +
+        '<span class="bf-d-sum ' + (sum >= 0 ? "in" : "out") + '">' +
+        (sum >= 0 ? "+" : "−") + "¥" + window.BFU.fmtMoney(Math.abs(sum)) + "</span></div>" +
+        rowsHtml + "</div>";
+    }).join("");
+
+    return '<div class="card bf-detail">' +
+      '<div class="card-title"><span class="dot"></span>收支详情' +
+      '<span class="muted small" style="margin-left:auto">共 ' + detail.length + " 笔</span></div>" +
+      body +
+      '<p class="muted small" style="margin-top:14px;line-height:1.85">' +
+      "· 「缴纳」是你交进来的，「分摊支出」是你被分摊到的支出<br>" +
+      "· 缴纳 − 分摊支出 = 上面的余额</p>" +
+      "</div>";
   }
 
   function doChangePassword() {
