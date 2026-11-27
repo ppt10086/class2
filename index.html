@@ -1978,30 +1978,45 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 .bf-record-members{flex:1 0 100%;min-width:0;padding-left:46px;order:4;
   display:grid;gap:3px;font-size:12px;line-height:1.55;color:var(--muted);overflow-wrap:anywhere}
 .bf-record-members b{font-weight:600;color:var(--text)}
-.bf-member-picker{min-width:0;margin:4px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius,12px)}
-.bf-member-picker legend{padding:0 4px;font-size:13px;font-weight:600}
-.bf-member-controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.bf-member-controls .bf-search{flex:1 1 10rem;min-width:0}
-.bf-member-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(7rem,1fr));gap:5px 9px;
-  max-height:10rem;overflow:auto;margin-top:8px;overscroll-behavior:contain}
-.bf-member{display:flex;align-items:center;gap:7px;min-width:0;min-height:34px;cursor:pointer}
+#modal-root .bf-record-modal{display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+  width:min(100%,760px);height:min(500px,calc(100dvh - 20px));max-width:760px;max-height:none;
+  gap:10px;padding:16px;margin:0;overflow:clip;box-sizing:border-box}
+#modal-root .modal-mask:has(.bf-record-modal){padding:10px}
+.bf-record-modal h3{margin:0}
+.bf-record-body{min-height:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.bf-record-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:8px}
+#modal-root .bf-record-fields .field{min-width:0;margin:0}
+.bf-record-fields .field label{margin-bottom:3px;line-height:1.2}
+.bf-record-fields .field input,.bf-record-fields .field select{box-sizing:border-box;width:100%;
+  min-width:0;min-height:34px;height:34px;padding:4px 8px}
+.bf-member-picker{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;min-width:0;min-height:0;
+  gap:6px;padding:8px;border:1px solid var(--line);border-radius:12px}
+.bf-member-picker h4{margin:0;font-size:13px;line-height:1.25}
+.bf-member-controls{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:5px}
+.bf-member-controls .bf-search{padding:0 6px;min-height:34px}
+.bf-member-controls .bf-search input{padding:0;min-height:32px;font-size:16px}
+.bf-record-modal .btn{min-height:34px;padding:4px 8px;white-space:nowrap}
+.bf-member-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,5.3rem),1fr));
+  align-content:start;gap:3px 6px;overflow:auto;overscroll-behavior:contain;min-height:0;margin:0}
+.bf-member{display:flex;align-items:center;gap:5px;min-width:0;min-height:30px;cursor:pointer}
 .bf-member input{width:16px;height:16px;margin:0;flex:none;accent-color:var(--primary)}
 .bf-member span{overflow-wrap:anywhere}
-.bf-member-picker p{margin-top:8px}
-@media(max-width:520px){.bf-record-members{padding-left:0}}
-@media(min-width:360px) and (max-width:580px){
-  .modal .bf-record-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .bf-record-fields .field,.bf-record-fields input,.bf-record-fields select{min-width:0;width:100%}
+.bf-member-picker #rec-member-summary{margin:0;font-size:12px;line-height:1.25}
+.bf-record-footer{display:flex;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
+.bf-record-actions{flex:none}
+#modal-root .bf-record-modal #rec-err:not(:empty){display:block;margin:0;padding:3px 6px;font-size:12px;overflow-wrap:anywhere}
+@media(max-width:570px){
+  #modal-root .bf-record-modal{height:min(560px,calc(100dvh - 20px));gap:8px;padding:10px}
+  .bf-record-body{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:8px}
 }
+@media(max-width:570px) and (max-height:500px){
+  #modal-root .bf-record-modal{gap:5px;padding:8px}
+  .bf-record-fields{gap:4px 6px}
+  .bf-record-fields .field input,.bf-record-fields .field select,.bf-record-modal .btn{height:30px;min-height:30px}
+  .bf-member-picker{padding:5px;gap:4px}
+}
+@media(max-width:520px){.bf-record-members{padding-left:0}}
 
-
-/* 月份分组 */
-.bf-group{margin-bottom:18px}
-.bf-group-head{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:600;color:var(--muted);
-  letter-spacing:.4px;margin:0 2px 8px}
-.bf-group-head::after{content:"";flex:1;height:1px;background:var(--line)}
-
-/* 公告：做成显眼的提示块 —— 左侧强调色竖条 + 浅色底 + 醒目标题与标签 */
 .bf-ann-section{margin-bottom:18px}
 .bf-ann-head{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700;
   color:var(--text);margin:0 2px 12px}
@@ -5379,35 +5394,36 @@ document.addEventListener('keydown', e => {
     var type = rec ? rec.type : "income";
     var catList = BF.CATEGORIES[type];
 
-    openModal("<h3>" + (rec ? "修改收支记录" : "新增收支记录") + "</h3>" +
-      '<p class="muted" style="margin-top:6px">' + (rec ? "改动会立即同步到云端公示" : "按类别填写本次班费信息") + "</p>" +
-      '<div class="grid grid-2 bf-record-fields" style="gap:10px;margin-top:14px">' +
+    openModal('<h3 id="rec-title">' + (rec ? "修改收支记录" : "新增收支记录") + "</h3>" +
+      '<div class="bf-record-body"><div class="bf-record-fields">' +
       '<div class="field"><label for="rec-type">收支类型</label><select id="rec-type">' +
       '<option value="income"' + (type === "income" ? " selected" : "") + ">收入（入账）</option>" +
       '<option value="expense"' + (type === "expense" ? " selected" : "") + ">支出（消费）</option></select></div>" +
       '<div class="field"><label for="rec-cat">分类</label><select id="rec-cat">' +
       catList.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + "</option>"; }).join("") +
-      "</select></div></div>" +
+      "</select></div>" +
       '<div class="field"><label for="rec-item">事项名称 *</label>' +
       '<input id="rec-item" placeholder="如：春游租车费" value="' + esc(rec ? rec.item : "") + '"></div>' +
-      '<div class="grid grid-2 bf-record-fields" style="gap:10px">' +
       '<div class="field"><label for="rec-amount">金额（元）*</label>' +
       '<input id="rec-amount" type="number" min="0.01" max="9999999999.99" step="0.01" placeholder="0.00" value="' + (rec ? rec.amount : "") + '"></div>' +
       '<div class="field"><label for="rec-date">日期</label>' +
-      '<input id="rec-date" type="date" value="' + esc(rec ? rec.date : BF.todayISO()) + '"></div></div>' +
+      '<input id="rec-date" type="date" value="' + esc(rec ? rec.date : BF.todayISO()) + '"></div>' +
       '<div class="field"><label for="rec-note">经办人 / 备注</label>' +
-      '<input id="rec-note" placeholder="谁收取 / 用途说明" value="' + esc(rec ? rec.note : "") + '"></div>' +
-      '<fieldset class="bf-member-picker"><legend>分摊成员</legend>' +
+      '<input id="rec-note" placeholder="谁收取 / 用途说明" value="' + esc(rec ? rec.note : "") + '"></div></div>' +
+      '<section class="bf-member-picker" aria-labelledby="rec-members-title"><h4 id="rec-members-title">分摊成员</h4>' +
       '<div class="bf-member-controls"><label class="bf-search"><span class="ico" data-icon="search"></span>' +
       '<input id="rec-member-filter" type="search" aria-label="搜索班级成员" placeholder="搜索姓名"></label>' +
-      '<button type="button" class="btn btn-sm" id="rec-member-all">全选筛选结果</button>' +
-      '<button type="button" class="btn btn-sm" id="rec-member-none">清空选择</button></div>' +
+      '<button type="button" class="btn btn-sm" id="rec-member-all" title="全选筛选结果" aria-label="全选筛选结果">全选</button>' +
+      '<button type="button" class="btn btn-sm" id="rec-member-none" aria-label="清空选择">清空</button></div>' +
       '<div id="rec-member-list" class="bf-member-list">正在读取班级名单…</div>' +
-      '<p id="rec-member-summary" class="muted small" aria-live="polite"></p></fieldset>' +
-      '<div id="rec-err" class="auth-err" role="status" style="min-height:18px"></div>' +
-      '<div class="row" style="justify-content:flex-end;gap:8px">' +
+      '<p id="rec-member-summary" class="muted small" aria-live="polite"></p></section></div>' +
+      '<div class="bf-record-footer"><div id="rec-err" class="auth-err" role="status"></div>' +
+      '<div class="row bf-record-actions">' +
       '<button class="btn" onclick="AppUI.closeModal()">取消</button>' +
-      '<button class="btn btn-primary" id="rec-save">' + (rec ? "保存修改" : "保存记录") + "</button></div>");
+      '<button class="btn btn-primary" id="rec-save">' + (rec ? "保存修改" : "保存记录") + "</button></div></div>");
+    var dialog = document.getElementById("rec-title").closest(".modal");
+    dialog.classList.add("bf-record-modal");
+    dialog.setAttribute("aria-labelledby", "rec-title");
 
     var typeEl = document.getElementById("rec-type");
     var catEl = document.getElementById("rec-cat");
