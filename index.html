@@ -1952,6 +1952,7 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 
 /* 账单行 */
 .bf-list{display:flex;flex-direction:column;gap:8px}
+.bf-list > .bf-li{flex-shrink:0}
 .bf-li{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);
   border-radius:var(--radius-sm);background:var(--panel3);position:relative;overflow:hidden;
   transition:border-color .18s ease,background .18s ease}
@@ -5137,7 +5138,7 @@ document.addEventListener('keydown', e => {
           '<span class="ico" data-icon="trash"></span></button></span>'
         : "") +
       (r.members && r.members.length
-        ? '<details class="bf-record-members"><summary>分摊名单 · ' + r.members.length +
+        ? '<details class="bf-record-members"><summary>查看分摊名单 · ' + r.members.length +
           ' 人</summary><p>' + r.members.map(esc).join("、") + "</p></details>"
         : '<div class="bf-record-members">' + (r.members === null ? "分摊名单暂不可用" : "未分摊") + "</div>") +
       "</div>";
