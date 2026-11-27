@@ -1976,8 +1976,11 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 .bf-top-actions{flex-wrap:wrap;min-width:0;max-width:100%}
 .bf-li{flex-wrap:wrap}
 .bf-record-members{flex:1 0 100%;min-width:0;padding-left:46px;order:4;
-  display:grid;gap:3px;font-size:12px;line-height:1.55;color:var(--muted);overflow-wrap:anywhere}
-.bf-record-members b{font-weight:600;color:var(--text)}
+  font-size:12px;line-height:1.55;color:var(--muted);overflow-wrap:anywhere}
+.bf-record-members summary{cursor:pointer;width:fit-content;max-width:100%;font-weight:650;color:var(--text)}
+.bf-record-members summary:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:2px}
+.bf-record-members p{margin:4px 0 0}
+.bf-record-members:not([open]) > p{display:none}
 #modal-root .bf-record-modal{display:grid;grid-template-rows:auto minmax(0,1fr) auto;
   width:min(100%,760px);height:min(500px,calc(100dvh - 20px));max-width:760px;max-height:none;
   gap:10px;padding:16px;margin:0;overflow:clip;box-sizing:border-box}
@@ -2108,6 +2111,49 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 @media (max-width:380px){
   .bf-balance{font-size:clamp(32px,12vw,42px);letter-spacing:-.8px}
   .bf-li-side{padding-left:0}
+}
+
+/* 总览与收支明细优先占满当前窗口，记录和公告列表可独立滚动。 */
+#view-main:has(> #main-area > #page-overview) #side-nav .bf-ext-link{margin-top:auto}
+#view-main:has(> #main-area > :is(#page-overview,#page-ledger):not([hidden])){height:var(--vpu,100dvh)}
+#main-area:has(> :is(#page-overview,#page-ledger):not([hidden])){
+  flex:1 1 auto;height:100%;box-sizing:border-box;min-height:0;padding-bottom:16px
+}
+:is(#page-overview,#page-ledger):not([hidden]){height:100%;min-height:0;min-width:0;display:grid;gap:10px}
+#page-overview:not([hidden]){grid-template-rows:auto auto auto minmax(0,1fr) auto}
+#page-ledger:not([hidden]){grid-template-rows:auto auto minmax(0,1fr)}
+:is(#page-overview,#page-ledger) .topbar{margin-bottom:0;align-items:center}
+:is(#page-overview,#page-ledger) .card+.card,
+#page-overview .bf-mybal-entry,#page-overview .bf-ann-section{margin:0}
+#page-overview .card-title,#page-overview .bf-ann-head{margin-bottom:6px}
+#page-overview .bf-balance{font-size:clamp(30px,7vw,52px)}
+:is(#page-overview,#page-ledger) .statrow{flex-direction:row;flex-wrap:nowrap}
+:is(#page-overview,#page-ledger) .statrow .sr-item{min-width:0;text-align:center;padding:4px 3px}
+:is(#page-overview,#page-ledger) .statrow b{font-size:clamp(14px,3vw,23px);overflow-wrap:anywhere}
+#page-overview .bf-ann-section{display:grid;grid-template-rows:auto minmax(0,1fr);max-height:min(22dvh,150px)}
+.bf-ledger-card,.bf-recent-card{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;min-width:0}
+.bf-recent-card .bf-list,#ledger-body,#page-overview .bf-anns{min-height:0;overflow:auto;overscroll-behavior:contain}
+@media(max-width:860px){
+  #main-area:has(> :is(#page-overview,#page-ledger):not([hidden])){
+    padding-top:10px;padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))
+  }
+  #page-overview .bf-mybal-entry{padding-block:8px}
+}
+@media(max-height:480px){
+  :is(#page-overview,#page-ledger):not([hidden]){gap:5px}
+  #page-overview .bf-ann-section{max-height:60px}
+  :is(#page-overview,#page-ledger) .statrow .sr-item{padding-block:1px}
+}
+@media(min-width:560px) and (max-height:480px){
+  #page-overview:not([hidden]){
+    grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
+    grid-template-rows:auto auto minmax(0,1fr);column-gap:14px
+  }
+  #page-overview .topbar{grid-area:1 / 1 / 2 / 3}
+  #page-overview .bf-mybal-entry{grid-area:2 / 2;align-self:start}
+  #page-overview .card:has(.bf-balance){grid-area:2 / 1}
+  #page-overview .bf-recent-card{grid-area:3 / 1}
+  #page-overview .bf-ann-section{grid-area:3 / 2;max-height:none;min-height:0}
 }
 
 /* ==========================================================================
@@ -2280,17 +2326,14 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
     <span class="ico" data-icon="menu"></span>
   </button>
 
-  <!-- 侧栏导航由 AppUI.buildNav() 按 PAGES 生成。
-       注意：buildNav() 是 `side.innerHTML = 导航 + 分隔线` 全量重写，
-       只保留它认识的 .side-user 节点，所以侧栏底部那行班级信息不能用静态 HTML 写在这里
-       （会被清掉），改由启动层在导航生成之后追加。 -->
+  <!-- 侧栏导航由 AppUI.buildNav() 生成，启动层再挂个人余额外链。 -->
   <aside class="sidebar" id="side-nav"></aside>
 
   <!-- 框架 AppUI.init() 会无条件写这几个节点（且不在 try 里）：
          #side-avatar / #side-name / #side-role / #set-user
        而框架自己的 boot() 在解析期就调用了 init()，那时我们的启动层还没跑，
        所以这些节点必须静态写在这里，不能靠 JS 后补 —— 缺一个就抛错、外壳不显示。
-       它们都不可见：只作为"占位"，真正的班级信息由启动层建到侧栏底部。 -->
+       它们都不可见，只作为框架初始化占位。 -->
   <span id="side-avatar" hidden></span>
   <span id="side-name" hidden></span>
   <span id="side-role" hidden></span>
@@ -5078,11 +5121,6 @@ document.addEventListener('keydown', e => {
   var esc = BF.esc;
 
   /* ---------------- 供页面复用的展示片段 ---------------- */
-  function stateTag(state, text) {
-    var cls = state === "ok" ? "tag tag-green" : state === "err" ? "tag tag-red" : "tag";
-    return '<span class="' + cls + '" id="sync-state">' + esc(text) + "</span>";
-  }
-
   function liRow(r) {
     var inC = r.type === "income";
     return '<div class="bf-li ' + (inC ? "in" : "out") + '">' +
@@ -5098,10 +5136,11 @@ document.addEventListener('keydown', e => {
           '<button class="btn btn-sm btn-danger" data-del="' + esc(r.id) + '" title="删除" aria-label="删除">' +
           '<span class="ico" data-icon="trash"></span></button></span>'
         : "") +
-      '<div class="bf-record-members">' +
-      (r.members === null ? "分摊名单暂不可用" : !r.members.length ? "未分摊" :
-        "<b>分摊名单 · " + r.members.length + " 人</b><span>" + r.members.map(esc).join("、") + "</span>") +
-      "</div></div>";
+      (r.members && r.members.length
+        ? '<details class="bf-record-members"><summary>分摊名单 · ' + r.members.length +
+          ' 人</summary><p>' + r.members.map(esc).join("、") + "</p></details>"
+        : '<div class="bf-record-members">' + (r.members === null ? "分摊名单暂不可用" : "未分摊") + "</div>") +
+      "</div>";
   }
 
   function annCard(a, i) {
@@ -5136,13 +5175,11 @@ document.addEventListener('keydown', e => {
     var recent = has ? BF.records.slice().sort(function (a, b) {
       return (b.date || "").localeCompare(a.date || "");
     }).slice(0, 5) : [];
-    var cats = BF.categoryStats().sort(function (a, b) { return b.total - a.total; }).slice(0, 4);
 
     var html =
-      '<div class="topbar"><div><h1>公示总览</h1>' +
-      '<div class="sub">' + esc(BF.CLASS_NAME) + " · 班级班费收支与结余一览</div></div>" +
+      '<div class="topbar"><h1>公示总览</h1>' +
       '<div class="row bf-top-actions">' +
-      stateTag(BF.cloud.state, BF.cloud.msg) + adminSlot() + "</div></div>";
+      adminSlot() + "</div></div>";
 
     /* 个人余额入口：醒目卡片。
        必须放在页面正文里 —— 手机上侧栏是抽屉、底栏也不放外链，
@@ -5161,7 +5198,7 @@ document.addEventListener('keydown', e => {
       UI.statRow([[BF.fmt(inT), "累计收入"], [BF.fmt(outT), "累计支出"], [String(BF.records.length), "记录条数"]])
     );
 
-    html += '<div class="card"><div class="card-title"><span class="dot"></span>最近收支' +
+    html += '<div class="card bf-recent-card"><div class="card-title"><span class="dot"></span>最近收支' +
       '<span class="muted small" style="margin-left:auto">最新 5 笔</span></div>' +
       (has ? '<div class="bf-list">' + recent.map(liRow).join("") + "</div>"
            : UI.empty("暂无班费记录，等待管理员录入")) + "</div>";
@@ -5172,15 +5209,6 @@ document.addEventListener('keydown', e => {
       (BF.announces.length
         ? '<div class="bf-anns">' + BF.announces.map(annCard).join("") + "</div>"
         : UI.empty("暂无公告")) + "</div>";
-
-    html += '<div class="card"><div class="card-title"><span class="dot"></span>支出分类占比' +
-      '<span class="muted small" style="margin-left:auto">按金额</span></div>' +
-      (cats.length ? cats.map(function (c) {
-        var pct = outT ? Math.round(c.total / outT * 100) : 0;
-        return '<div class="bf-cat"><div class="bf-cat-head"><span>' + esc(c.cat) + "</span><span>" +
-          "¥" + BF.fmt(c.total) + " · " + pct + "%</span></div>" +
-          '<div class="bf-bar"><i style="width:' + pct + '%"></i></div></div>';
-      }).join("") : '<p class="muted">暂无支出记录</p>') + "</div>";
 
     document.getElementById("page-overview").innerHTML = html;
   }
@@ -5225,12 +5253,12 @@ document.addEventListener('keydown', e => {
       '<div class="topbar"><div><h1>收支明细</h1>' +
       '<div class="sub">按月份分组，支持筛选与搜索</div></div>' +
       '<div class="row bf-top-actions">' +
-      stateTag(BF.cloud.state, BF.cloud.msg) + adminSlot() + "</div></div>";
+      adminSlot() + "</div></div>";
 
     html += UI.card("", UI.statRow([[BF.fmt(sumIn), "筛出收入"], [BF.fmt(sumOut), "筛出支出"],
       [BF.fmt(sumIn - sumOut), "净流入"]]));
 
-    html += '<div class="card"><div class="bf-toolbar">' +
+    html += '<div class="card bf-ledger-card"><div class="bf-toolbar">' +
       '<label class="bf-search"><span class="ico" data-icon="search"></span>' +
       '<input id="ledger-q" placeholder="搜索事项 / 分类 / 经办人…" value="' + esc(ledgerFilter.q) + '"></label>' +
       '<div class="bf-seg" id="ledger-type">' +
@@ -5256,7 +5284,7 @@ document.addEventListener('keydown', e => {
       '<div class="topbar"><div><h1>收支分析</h1>' +
       '<div class="sub">趋势与分类占比统计</div></div>' +
       '<div class="row bf-top-actions">' +
-      stateTag(BF.cloud.state, BF.cloud.msg) + adminSlot() + "</div></div>";
+      adminSlot() + "</div></div>";
 
     if (!BF.records.length) {
       html += '<div class="card">' + UI.empty("暂无数据可分析，录入班费收支后展示按月趋势与分类占比") + "</div>";
@@ -5728,41 +5756,6 @@ document.addEventListener('keydown', e => {
   AppAuth.logout = function () { toast("本页为公开公示页，无需登录"); };
   AppAuth.showAuth = function () { /* 公开页：不显示登录页 */ };
 
-  /* ---- 1b. 侧栏底部那行班级信息 ----
-     框架的 buildNav() 是整段重写 #side-nav（`side.innerHTML = 导航 + 分隔线`），
-     静态写在 shell 里的节点会被清掉，所以改为在它跑完之后追加。
-     这行不是按钮：没有点击行为、pointer-events:none，只是班级标识，
-     不承担"用户中心"的角色。
-     同时把 #side-name/#side-role 的 textContent 设为只读，
-     免得框架 AppUI.init() 把它们改成「用户中心 / 访客」。 */
-  function mountSideInfo() {
-    var side = document.getElementById("side-nav");
-    if (!side || side.querySelector(".bf-side-info")) return;
-    var row = document.createElement("div");
-    row.className = "side-foot bf-side-info";
-    side.appendChild(row);
-    /* 把 shell 里那对占位 span 直接搬进来用（避免出现重复 id），
-       并把它们的文本固定成班级信息。 */
-    var nm = document.getElementById("side-name");
-    var role = document.getElementById("side-role");
-    if (nm) { nm.hidden = false; nm.textContent = "班级班费公示"; row.appendChild(nm); }
-    if (role) { role.hidden = false; role.textContent = BF.CLASS_NAME; row.appendChild(role); }
-    /* 这两个节点由我们掌控，禁止框架覆写成「用户中心 / 访客」 */
-    try {
-      var D = Object.getOwnPropertyDescriptor(Element.prototype, "textContent");
-      if (D && D.get && D.set) {
-        [nm, role].forEach(function (el) {
-          if (!el) return;
-          Object.defineProperty(el, "textContent", {
-            configurable: true,
-            get: function () { return D.get.call(this); },
-            set: function () { /* 保留班级信息 */ }
-          });
-        });
-      }
-    } catch (e) {}
-  }
-
   /* ---- 2. 关掉「断网拦截层」 ----
      本页数据走 Supabase REST（不走框架的 sl_* RPC），Net 的探测与我们无关；
      断网时本机缓存照常可看，不该被全屏拦截层挡住。 */
@@ -5786,20 +5779,12 @@ document.addEventListener('keydown', e => {
     } catch (e) {
       try { console.warn("[班费] 外壳初始化失败", e); } catch (_) {}
     }
-    /* 导航生成之后再挂侧栏底部那行班级信息（buildNav 会整段重写 #side-nav） */
-    try { mountSideInfo(); } catch (e) {}
     /* 侧栏再加一个「个人余额查询」外链（指向同站点的 my-balance.html） */
     try { if (typeof window.__bfMountBalanceLink === 'function') window.__bfMountBalanceLink(); } catch (e) {}
     /* 数据层：先用本机缓存渲染（离线可看），再拉云端并在回来后刷新当前页 */
     try { BF.boot(); } catch (e) { console.warn("[班费] 数据层启动失败", e); }
     try { window.__bfRefresh(); } catch (e) {}
 
-    var tick = 0;
-    var timer = setInterval(function () {
-      tick++;
-      try { window.__bfRefresh(); } catch (e) {}
-      if (tick >= 8) clearInterval(timer);
-    }, 900);
   }
 
   if (document.readyState === "loading") {
