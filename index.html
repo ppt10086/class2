@@ -1973,6 +1973,27 @@ code{ font:inherit; font-size:12.5px; padding:1px 5px; border-radius:6px;
 .bf-li-ops{display:flex;gap:4px;flex:0 0 auto}
 .bf-li-ops .btn{padding:5px 7px}
 .bf-li-ops .ico{width:15px;height:15px}
+.bf-top-actions{flex-wrap:wrap;min-width:0;max-width:100%}
+.bf-li{flex-wrap:wrap}
+.bf-record-members{flex:1 0 100%;min-width:0;padding-left:46px;order:4;
+  display:grid;gap:3px;font-size:12px;line-height:1.55;color:var(--muted);overflow-wrap:anywhere}
+.bf-record-members b{font-weight:600;color:var(--text)}
+.bf-member-picker{min-width:0;margin:4px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius,12px)}
+.bf-member-picker legend{padding:0 4px;font-size:13px;font-weight:600}
+.bf-member-controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bf-member-controls .bf-search{flex:1 1 10rem;min-width:0}
+.bf-member-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(7rem,1fr));gap:5px 9px;
+  max-height:10rem;overflow:auto;margin-top:8px;overscroll-behavior:contain}
+.bf-member{display:flex;align-items:center;gap:7px;min-width:0;min-height:34px;cursor:pointer}
+.bf-member input{width:16px;height:16px;margin:0;flex:none;accent-color:var(--primary)}
+.bf-member span{overflow-wrap:anywhere}
+.bf-member-picker p{margin-top:8px}
+@media(max-width:520px){.bf-record-members{padding-left:0}}
+@media(min-width:360px) and (max-width:580px){
+  .modal .bf-record-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bf-record-fields .field,.bf-record-fields input,.bf-record-fields select{min-width:0;width:100%}
+}
+
 
 /* 月份分组 */
 .bf-group{margin-bottom:18px}
@@ -4579,8 +4600,8 @@ document.addEventListener('keydown', e => {
 
   /* ---------------- 配置 ---------------- */
   /* 运行时状态先声明：initCloud() 会写 cloud.online，不能被暂时性死区挡住 */
-  var records = [], announces = [], adminMode = false, adminToken = "";
-  var recDirty = new Set(), annDirty = new Set(), recDeleted = new Set(), cloudKnownAids = new Set();
+  var records = [], announces = [], adminMode = false, adminToken = "", recordVersion = 0;
+  var annDirty = new Set();
   var cloud = { online: false, syncing: false, queued: false, state: "idle", msg: "初始化…" };
 
   /* 部署器（HTML→GitHub 一键部署器）会注入 window.SiteDB.config。 */
@@ -4603,19 +4624,7 @@ document.addEventListener('keydown', e => {
   var CACHE_KEY = "class_fund_cache_v2";
   var STORAGE_KEY = "class_fund_records";
   var ANN_KEY = "class_fund_announce";
-  var META_KEY = "class_fund_meta_v2";
   var PREF_KEY = "class_fund_prefs_v2";
-
-  /* 管理员口令（加盐 PBKDF2-SHA256）。明文不落于代码。
-     强轨：浏览器原生 WebCrypto，15 万次迭代（线上 https 走这条）
-     弱轨：纯 JS 回退，2 万次迭代（file:// 本地调试走这条，15 万次要 13 秒）
-     ADMIN_HASH 只用于生成云端写入凭证 x-admin-hash，不参与口令校验。 */
-  var ADMIN_PBKDF2_SALT = "b8623ba9437c41cc5a2eae5518358f3a";
-  var ADMIN_PBKDF2_ITER = 150000;
-  var ADMIN_PBKDF2_HASH = "8a26d4abffc713359e5047dd1dbf671daead7a101363f3c4bcc4ba0cd78e6253";
-  var ADMIN_PBKDF2_ITER_FALLBACK = 20000;
-  var ADMIN_PBKDF2_HASH_FALLBACK = "b505d6857d1467a73a713c867114b086c77b9be34fb7705c930a009dbcf3c0a0";
-  var ADMIN_HASH = "52c3771e53f78ee1b36b7578856f243f7b82362f5506bc2d79ca656f4dea9b62";
 
   var CLASS_NAME = "2026级公共管理类本科2班";
   var CATEGORIES = {
@@ -4682,75 +4691,6 @@ document.addEventListener('keydown', e => {
     return out;
   }
   function sha256(s) { sha256Bytes(s); return sha256Bytes._hex; }
-  function hexToBytes(h) { var o = new Uint8Array(h.length / 2); for (var i = 0; i < o.length; i++) o[i] = parseInt(h.substr(i * 2, 2), 16); return o; }
-  function bytesToHex(b) { var s = ""; for (var i = 0; i < b.length; i++) s += ("0" + b[i].toString(16)).slice(-2); return s; }
-  function strToBytes(s) {
-    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(s);
-    var o = [];
-    for (var i = 0; i < s.length; i++) {
-      var c = s.charCodeAt(i);
-      if (c < 128) o.push(c);
-      else if (c < 2048) { o.push(192 | (c >> 6), 128 | (c & 63)); }
-      else if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
-        var c2 = s.charCodeAt(++i); var cp = 0x10000 + ((c - 0xD800) << 10) + (c2 - 0xDC00);
-        o.push(240 | (cp >> 18), 128 | ((cp >> 12) & 63), 128 | ((cp >> 6) & 63), 128 | (cp & 63));
-      } else { o.push(224 | (c >> 12), 128 | ((c >> 6) & 63), 128 | (c & 63)); }
-    }
-    return new Uint8Array(o);
-  }
-  function concatBytes(a, b) { var o = new Uint8Array(a.length + b.length); o.set(a, 0); o.set(b, a.length); return o; }
-  function hmacSha256(key, msg) {
-    if (key.length > 64) key = sha256Bytes(String.fromCharCode.apply(null, key));
-    var k = new Uint8Array(64); k.set(key);
-    var ipad = new Uint8Array(64), opad = new Uint8Array(64);
-    for (var i = 0; i < 64; i++) { ipad[i] = k[i] ^ 0x36; opad[i] = k[i] ^ 0x5c; }
-    var inner = sha256Bytes(String.fromCharCode.apply(null, concatBytes(ipad, msg)));
-    return sha256Bytes(String.fromCharCode.apply(null, concatBytes(opad, inner)));
-  }
-  function pbkdf2Raw(password, salt, iterations, keylen) {
-    var pw = strToBytes(password), dk = new Uint8Array(keylen);
-    var blocks = Math.ceil(keylen / 32);
-    for (var i = 1; i <= blocks; i++) {
-      var ib = new Uint8Array(4);
-      ib[0] = (i >>> 24) & 255; ib[1] = (i >>> 16) & 255; ib[2] = (i >>> 8) & 255; ib[3] = i & 255;
-      var u = hmacSha256(pw, concatBytes(salt, ib));
-      var t = new Uint8Array(u);
-      for (var j = 1; j < iterations; j++) {
-        u = hmacSha256(pw, u);
-        for (var k = 0; k < t.length; k++) t[k] ^= u[k];
-      }
-      var off = (i - 1) * 32;
-      for (var q = 0; q < 32 && off + q < keylen; q++) dk[off + q] = t[q];
-    }
-    return dk;
-  }
-  function pbkdf2Subtle(password, salt, iterations, keylen) {
-    var enc = new TextEncoder();
-    return crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"])
-      .then(function (k) {
-        return crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" }, k, keylen * 8);
-      })
-      .then(function (bits) { return new Uint8Array(bits); });
-  }
-  function hasSubtlePBKDF2() {
-    try {
-      return !!(window.crypto && window.crypto.subtle && typeof window.crypto.subtle.importKey === "function" &&
-        (typeof window.isSecureContext === "undefined" || window.isSecureContext === true));
-    } catch (e) { return false; }
-  }
-  function pbkdf2Hex(password, saltHex, keylen) {
-    var salt = hexToBytes(saltHex);
-    if (hasSubtlePBKDF2()) {
-      return pbkdf2Subtle(password, salt, ADMIN_PBKDF2_ITER, keylen).then(bytesToHex).catch(function () {
-        return bytesToHex(pbkdf2Raw(password, salt, ADMIN_PBKDF2_ITER_FALLBACK, keylen));
-      });
-    }
-    return new Promise(function (res) {
-      setTimeout(function () { res(bytesToHex(pbkdf2Raw(password, salt, ADMIN_PBKDF2_ITER_FALLBACK, keylen))); }, 0);
-    });
-  }
-  function expectedHash() { return hasSubtlePBKDF2() ? ADMIN_PBKDF2_HASH : ADMIN_PBKDF2_HASH_FALLBACK; }
-
   /* ---------------- 状态 ---------------- */
   function tableUrl() { return CFG.url + "/rest/v1/form_submissions"; }
   function headers(write) {
@@ -4776,6 +4716,49 @@ document.addEventListener('keydown', e => {
   var cloudUpdate = function (id, payload) { return rest("PATCH", "&id=eq." + encodeURIComponent(id), { payload: payload }); };
   var cloudDelete = function (id) { return rest("DELETE", "&id=eq." + encodeURIComponent(id)); };
 
+  function rpc(name, args, token) {
+    if (!cloud.online) return Promise.reject(new Error("云端未连接"));
+    var h = headers(false);
+    if (token) h["x-admin-hash"] = token;
+    return fetch(CFG.url + "/rest/v1/rpc/" + name, {
+      method: "POST", headers: h, body: JSON.stringify(args || {})
+    }).then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok) {
+          var err = new Error((data && data.message) || "HTTP " + response.status);
+          err.status = response.status;
+          err.code = data && data.code;
+          throw err;
+        }
+        return data;
+      });
+    });
+  }
+
+  function memberRoster() {
+    return rpc("bf_admin_list", {}, adminToken).then(function (data) {
+      if (!data || data.ok !== true) throw new Error("读取名单失败");
+      return data.items || [];
+    });
+  }
+
+  function writeRecord(id, record, names, previous) {
+    return rpc("bf_admin_save_record", {
+      p_record_id: id,
+      p_payload: record ? recordToPayload(record) : null,
+      p_usernames: names,
+      p_expected_upd: previous ? previous._upd : null,
+      p_expected_members: previous ? previous.members : []
+    }, adminToken).then(function (data) {
+      if (!data || data.ok !== true) throw new Error("保存失败");
+      recordVersion++;
+      records = records.filter(function (row) { return row.id !== id; });
+      if (data.row) records.push(rowToRecord(data.row));
+      cacheWrite();
+      if (typeof window.__bfRefresh === "function") window.__bfRefresh();
+    });
+  }
+
   function setSync(state, msg) {
     cloud.state = state; cloud.msg = msg;
     var el = document.getElementById("sync-state");
@@ -4796,9 +4779,6 @@ document.addEventListener('keydown', e => {
   function cacheWrite() {
     lsSet(CACHE_KEY, JSON.stringify({ records: records, announces: announces, at: Date.now() }));
   }
-  function metaRead() { try { return JSON.parse(lsGet(META_KEY) || "{}") || {}; } catch (e) { return {}; } }
-  function metaWrite(m) { lsSet(META_KEY, JSON.stringify(m)); }
-
   /* ---------------- 行 <-> 对象 ---------------- */
   function rowToRecord(row) {
     var p = (row && row.payload) || {};
@@ -4809,7 +4789,7 @@ document.addEventListener('keydown', e => {
       id: String(p.rid || row.id), type: p.type === "income" ? "income" : "expense",
       cat: String(p.cat || "其他"), item: String(p.item), amount: amount,
       date: String(p.date || ""), note: String(p.note || ""), by: String(p.by || "管理员"),
-      _upd: p.upd || row.created_at || ""
+      members: Array.isArray(row.members) ? row.members : null, _upd: p.upd || ""
     };
   }
   function rowToAnn(row) {
@@ -4832,7 +4812,8 @@ document.addEventListener('keydown', e => {
       type: r.type === "income" ? "income" : "expense",
       cat: String(r.cat || "其他"), item: String(r.item || ""),
       amount: Number(r.amount) || 0, date: String(r.date || ""),
-      note: String(r.note || ""), by: String(r.by || "管理员"), _upd: r._upd || ""
+      note: String(r.note || ""), by: String(r.by || "管理员"),
+      members: Array.isArray(r.members) ? r.members : null, _upd: r._upd || ""
     };
   }
 
@@ -4907,60 +4888,23 @@ document.addEventListener('keydown', e => {
 
   /* ---------------- 拉取云端 ---------------- */
   function pullCloud(manual) {
-    if (!cloud.online) { setSync("off", "本地缓存模式"); if (manual) toast("未接入云端，正在使用本机缓存"); return Promise.resolve(); }
-    if (cloud.syncing) { cloud.queued = true; return Promise.resolve(); }
-    cloud.syncing = true; cloud.queued = false;
+    if (!cloud.online) { setSync("off", "本地缓存模式"); return Promise.resolve(); }
+    var version = recordVersion;
     setSync("busy", "同步中…");
-    return cloudList().then(function (rows) {
-      rows = rows || [];
-      var cRecs = rows.map(rowToRecord).filter(Boolean);
-      var cAnns = rows.map(rowToAnn).filter(Boolean);
-      var hasCloudData = cRecs.length > 0 || cAnns.length > 0;
-      var meta = metaRead();
-      cloudKnownAids = new Set(cAnns.map(function (a) { return String(a._rowId); }));
-
-      if (!hasCloudData && (records.length || announces.length)) {
-        if (adminMode || meta.pushedOnce) return pushCloud(true, "full");
-        setSync("ok", "已就绪 · 本机 " + records.length + " 笔");
-        if (!adminMode && !meta.pushedOnce && !annConfiguredLocally() && !records.length) {
-          toast("云端暂无数据，请班委登录管理员后完成首次上传", "warn");
-        }
-        return null;
-      } else if (hasCloudData) {
-        var merged = cRecs.map(function (c) {
-          var l = records.find(function (x) { return x.id === c.id; });
-          return (l && recDirty.has(l.id)) ? l : c;
-        });
-        var known = new Set(merged.map(function (r) { return r.id; }));
-        records.forEach(function (l) { if (recDirty.has(l.id) && !known.has(l.id)) merged.push(l); });
-        merged.sort(function (a, b) {
-          return (a.date || "").localeCompare(b.date || "") || String(a.id).localeCompare(String(b.id));
-        });
-        records = merged;
-
-        var annMerged = cAnns.map(function (c) {
-          var l = announces.find(function (x) { return x.id === c.id; });
-          return (l && annDirty.has(l.id)) ? l : c;
-        });
-        var annKnown = new Set(annMerged.map(function (a) { return a.id; }));
-        announces.forEach(function (l) { if (annDirty.has(l.id) && !annKnown.has(l.id)) annMerged.push(l); });
-        announces = annMerged;
-
-        cacheWrite();
-        if (!meta.pushedOnce) { meta.pushedOnce = true; metaWrite(meta); }
-        if (recDirty.size || annDirty.size || recDeleted.size) return pushCloud(true, "dirty");
-      } else {
-        cacheWrite();
-      }
+    return rpc("bf_public_ledger").catch(function (error) {
+      if (error.code === "PGRST202") return cloudList();
+      throw error;
+    }).then(function (rows) {
+      if (version === recordVersion) records = (rows || []).map(rowToRecord).filter(Boolean);
+      if (!annDirty.size) announces = (rows || []).map(rowToAnn).filter(Boolean);
+      cacheWrite();
+      setSync("ok", "已同步 · " + records.length + " 笔收支 / " + announces.length + " 条公告");
+      if (typeof window.__bfRefresh === "function") window.__bfRefresh();
       if (manual) toast("已与云端同步");
-      return null;
     }).catch(function (e) {
       setSync("err", "云端连接失败");
       if (manual) toast("同步失败：" + (e.message || e), "err");
       console.warn("[班费] 云端拉取失败：", e);
-    }).then(function () {
-      cloud.syncing = false;
-      if (cloud.queued) { cloud.queued = false; pullCloud(false); }
     });
   }
 
@@ -4973,38 +4917,18 @@ document.addEventListener('keydown', e => {
     }
     if (cloud.syncing) { cloud.queued = true; return Promise.resolve(true); }
     if (!mode) mode = "dirty";
-    if (mode === "dirty" && !recDirty.size && !annDirty.size && !recDeleted.size) return Promise.resolve(true);
+    if (!annDirty.size) return Promise.resolve(true);
     cloud.syncing = true; cloud.queued = false;
     setSync("busy", "上传中…");
     return cloudList().then(function (rows) {
       rows = rows || [];
-      var byRid = new Map(), byAid = new Map();
+      var byAid = new Map();
       rows.forEach(function (row) {
         var p = row.payload || {};
-        if (p.kind === RECORD_KIND && p.rid) byRid.set(String(p.rid), row);
-        else if (p.kind === ANN_KIND && p.aid) byAid.set(String(p.aid), row);
+        if (p.kind === ANN_KIND && p.aid) byAid.set(String(p.aid), row);
       });
       var nowIso = new Date().toISOString();
-      var ops = [], toInsert = [], annToInsert = [];
-
-      records.forEach(function (r) {
-        if (!r._upd) r._upd = nowIso;
-        var row = byRid.get(r.id), p = recordToPayload(r);
-        if (!row) toInsert.push(p);
-        else {
-          var old = row.payload || {};
-          if (JSON.stringify([old.type, old.cat, old.item, old.amount, old.date, old.note, old.by]) !==
-              JSON.stringify([p.type, p.cat, p.item, p.amount, p.date, p.note, p.by])) {
-            ops.push(cloudUpdate(row.id, p));
-          }
-        }
-        byRid.delete(r.id);
-      });
-      if (mode === "full") byRid.forEach(function (row) { ops.push(cloudDelete(row.id)); });
-      else recDeleted.forEach(function (id) {
-        var row = byRid.get(id);
-        if (row) { ops.push(cloudDelete(row.id)); byRid.delete(id); }
-      });
+      var ops = [], annToInsert = [];
 
       announces.forEach(function (a) {
         if (!a._upd) a._upd = nowIso;
@@ -5027,13 +4951,10 @@ document.addEventListener('keydown', e => {
         }
       }
 
-      if (toInsert.length) ops.push(cloudInsert(toInsert.map(function (p) { return { site_id: CFG.site, payload: p }; })));
       if (annToInsert.length) ops.push(cloudInsert(annToInsert.map(function (p) { return { site_id: CFG.site, payload: p }; })));
       return Promise.all(ops);
     }).then(function () {
-      recDirty.clear(); annDirty.clear(); recDeleted.clear();
-      cloudKnownAids = new Set(announces.map(function (a) { return String(a.id); }));
-      var meta = metaRead(); meta.pushedOnce = true; metaWrite(meta);
+      annDirty.clear();
       cacheWrite();
       setSync("ok", "已同步 · " + records.length + " 笔收支 / " + announces.length + " 条公告");
       if (!silent) toast("已保存并同步到云端");
@@ -5069,14 +4990,16 @@ document.addEventListener('keydown', e => {
 
   /* ---------------- 管理员 ---------------- */
   function verifyAdmin(pwd) {
-    return pbkdf2Hex(pwd, ADMIN_PBKDF2_SALT, 32).then(function (hex) {
-      if (hex !== expectedHash()) return false;
+    var bytes = new TextEncoder().encode("class2-admin-v2:" + pwd);
+    var token = sha256(Array.from(bytes, function (byte) { return String.fromCharCode(byte); }).join(""));
+    return rpc("bf_admin_list", {}, token).then(function (data) {
+      if (!data || data.ok !== true) return false;
+      adminToken = token;
       adminMode = true;
-      adminToken = sha256(pwd);
-      announces.forEach(function (a) { annDirty.add(a.id); });
-      records.forEach(function (r) { recDirty.add(r.id); });
-      pushCloud(false, "full");
       return true;
+    }).catch(function (error) {
+      if (error.status === 401 || error.status === 403) return false;
+      throw error;
     });
   }
 
@@ -5097,22 +5020,7 @@ document.addEventListener('keydown', e => {
     byMonth: byMonth, categoryStats: categoryStats, maxExpenseMonth: maxExpenseMonth,
     sum: sum, save: save, saveAnn: saveAnn,
     normalizeRecord: normalizeRecord,
-    /* 数组是 getter-only：外部不能用 BF.records = ... 赋值（严格模式下会静默失败）。
-       增删改一律走下面这几个方法，它们就地修改同一个数组，引用不会断。 */
-    addRecord: function (r) { records.push(r); return r; },
-    updateRecord: function (id, patch) {
-      var i = records.findIndex(function (r) { return String(r.id) === String(id); });
-      if (i < 0) return null;
-      records[i] = Object.assign({}, records[i], patch);
-      return records[i];
-    },
-    removeRecord: function (id) {
-      var before = records.length;
-      records = records.filter(function (r) { return String(r.id) !== String(id); });
-      recDirty.delete(String(id)); recDeleted.add(String(id));
-      cacheWrite();
-      return records.length < before;
-    },
+    memberRoster: memberRoster, writeRecord: writeRecord,
     addAnnounce: function (a) { announces.push(a); return a; },
     updateAnnounce: function (i, a) { if (i < 0 || i >= announces.length) return null; announces[i] = a; return a; },
     removeAnnounce: function (i) {
@@ -5129,8 +5037,6 @@ document.addEventListener('keydown', e => {
       cacheWrite();
       return ids;
     },
-    markRecordDirty: function (id) { recDirty.add(id); },
-    markRecordDeleted: function (id) { recDirty.delete(id); recDeleted.add(id); },
     markAnnDirty: function (id) { annDirty.add(id); },
     cacheWrite: cacheWrite,
     prefs: {
@@ -5177,7 +5083,10 @@ document.addEventListener('keydown', e => {
           '<button class="btn btn-sm btn-danger" data-del="' + esc(r.id) + '" title="删除" aria-label="删除">' +
           '<span class="ico" data-icon="trash"></span></button></span>'
         : "") +
-      "</div>";
+      '<div class="bf-record-members">' +
+      (r.members === null ? "分摊名单暂不可用" : !r.members.length ? "未分摊" :
+        "<b>分摊名单 · " + r.members.length + " 人</b><span>" + r.members.map(esc).join("、") + "</span>") +
+      "</div></div>";
   }
 
   function annCard(a, i) {
@@ -5217,7 +5126,7 @@ document.addEventListener('keydown', e => {
     var html =
       '<div class="topbar"><div><h1>公示总览</h1>' +
       '<div class="sub">' + esc(BF.CLASS_NAME) + " · 班级班费收支与结余一览</div></div>" +
-      '<div class="row" style="gap:8px;align-items:center">' +
+      '<div class="row bf-top-actions">' +
       stateTag(BF.cloud.state, BF.cloud.msg) + adminSlot() + "</div></div>";
 
     /* 个人余额入口：醒目卡片。
@@ -5300,7 +5209,7 @@ document.addEventListener('keydown', e => {
     var html =
       '<div class="topbar"><div><h1>收支明细</h1>' +
       '<div class="sub">按月份分组，支持筛选与搜索</div></div>' +
-      '<div class="row" style="gap:8px;align-items:center">' +
+      '<div class="row bf-top-actions">' +
       stateTag(BF.cloud.state, BF.cloud.msg) + adminSlot() + "</div></div>";
 
     html += UI.card("", UI.statRow([[BF.fmt(sumIn), "筛出收入"], [BF.fmt(sumOut), "筛出支出"],
@@ -5331,7 +5240,7 @@ document.addEventListener('keydown', e => {
     var html =
       '<div class="topbar"><div><h1>收支分析</h1>' +
       '<div class="sub">趋势与分类占比统计</div></div>' +
-      '<div class="row" style="gap:8px;align-items:center">' +
+      '<div class="row bf-top-actions">' +
       stateTag(BF.cloud.state, BF.cloud.msg) + adminSlot() + "</div></div>";
 
     if (!BF.records.length) {
@@ -5421,7 +5330,7 @@ document.addEventListener('keydown', e => {
     if (typeof window.__bfRefresh === "function") window.__bfRefresh();
   }
 
-  /* 管理员登录：框架弹层 + PBKDF2 校验 */
+  /* 管理员登录：由云端验证管理凭据 */
   function openAdminLogin() {
     openModal('<h3>管理员验证</h3>' +
       '<p class="muted" style="margin-top:6px;line-height:1.7">管理功能仅对班委开放。<br>' +
@@ -5444,7 +5353,7 @@ document.addEventListener('keydown', e => {
         if (btn) { btn.disabled = false; btn.textContent = "验证进入"; }
         if (ok) {
           AppUI.closeModal();
-          toast("管理模式已启用（本次访问有效），正在同步云端…");
+          toast("管理模式已启用（本次访问有效）");
           refresh();
         } else {
           if (err) err.textContent = "密码错误，请重试";
@@ -5461,18 +5370,18 @@ document.addEventListener('keydown', e => {
   }
 
   /* 新增 / 修改收支 */
-  var recEditId = null;
   function openRecEditor(editId) {
     if (!BF.adminMode) { toast("请先登录管理员", "warn"); return; }
-    recEditId = (editId != null) ? String(editId) : null;
+    var recEditId = editId != null ? String(editId) : null;
     var rec = recEditId ? BF.records.find(function (r) { return String(r.id) === recEditId; }) : null;
     if (recEditId && !rec) { toast("找不到这条记录", "err"); return; }
+    var pendingId = recEditId || BF.uid();
     var type = rec ? rec.type : "income";
     var catList = BF.CATEGORIES[type];
 
     openModal("<h3>" + (rec ? "修改收支记录" : "新增收支记录") + "</h3>" +
       '<p class="muted" style="margin-top:6px">' + (rec ? "改动会立即同步到云端公示" : "按类别填写本次班费信息") + "</p>" +
-      '<div class="grid grid-2" style="gap:10px;margin-top:14px">' +
+      '<div class="grid grid-2 bf-record-fields" style="gap:10px;margin-top:14px">' +
       '<div class="field"><label for="rec-type">收支类型</label><select id="rec-type">' +
       '<option value="income"' + (type === "income" ? " selected" : "") + ">收入（入账）</option>" +
       '<option value="expense"' + (type === "expense" ? " selected" : "") + ">支出（消费）</option></select></div>" +
@@ -5481,14 +5390,21 @@ document.addEventListener('keydown', e => {
       "</select></div></div>" +
       '<div class="field"><label for="rec-item">事项名称 *</label>' +
       '<input id="rec-item" placeholder="如：春游租车费" value="' + esc(rec ? rec.item : "") + '"></div>' +
-      '<div class="grid grid-2" style="gap:10px">' +
+      '<div class="grid grid-2 bf-record-fields" style="gap:10px">' +
       '<div class="field"><label for="rec-amount">金额（元）*</label>' +
-      '<input id="rec-amount" type="number" min="0.01" step="0.01" placeholder="0.00" value="' + (rec ? rec.amount : "") + '"></div>' +
+      '<input id="rec-amount" type="number" min="0.01" max="9999999999.99" step="0.01" placeholder="0.00" value="' + (rec ? rec.amount : "") + '"></div>' +
       '<div class="field"><label for="rec-date">日期</label>' +
       '<input id="rec-date" type="date" value="' + esc(rec ? rec.date : BF.todayISO()) + '"></div></div>' +
       '<div class="field"><label for="rec-note">经办人 / 备注</label>' +
       '<input id="rec-note" placeholder="谁收取 / 用途说明" value="' + esc(rec ? rec.note : "") + '"></div>' +
-      '<div id="rec-err" class="auth-err" style="min-height:18px"></div>' +
+      '<fieldset class="bf-member-picker"><legend>分摊成员</legend>' +
+      '<div class="bf-member-controls"><label class="bf-search"><span class="ico" data-icon="search"></span>' +
+      '<input id="rec-member-filter" type="search" aria-label="搜索班级成员" placeholder="搜索姓名"></label>' +
+      '<button type="button" class="btn btn-sm" id="rec-member-all">全选筛选结果</button>' +
+      '<button type="button" class="btn btn-sm" id="rec-member-none">清空选择</button></div>' +
+      '<div id="rec-member-list" class="bf-member-list">正在读取班级名单…</div>' +
+      '<p id="rec-member-summary" class="muted small" aria-live="polite"></p></fieldset>' +
+      '<div id="rec-err" class="auth-err" role="status" style="min-height:18px"></div>' +
       '<div class="row" style="justify-content:flex-end;gap:8px">' +
       '<button class="btn" onclick="AppUI.closeModal()">取消</button>' +
       '<button class="btn btn-primary" id="rec-save">' + (rec ? "保存修改" : "保存记录") + "</button></div>");
@@ -5506,30 +5422,103 @@ document.addEventListener('keydown', e => {
     });
 
     var save = document.getElementById("rec-save");
-    if (save) save.addEventListener("click", function () {
+    var err = document.getElementById("rec-err");
+    var amountEl = document.getElementById("rec-amount");
+    var filter = document.getElementById("rec-member-filter");
+    var list = document.getElementById("rec-member-list");
+    var summary = document.getElementById("rec-member-summary");
+    var all = document.getElementById("rec-member-all");
+    var none = document.getElementById("rec-member-none");
+    var names = [], available = new Set();
+    var selected = new Set(rec && rec.members || []);
+    save.disabled = all.disabled = none.disabled = filter.disabled = true;
+
+    function matchingNames() {
+      var query = filter.value.trim().toLowerCase();
+      return names.filter(function (name) { return name.toLowerCase().includes(query); });
+    }
+    function updateSummary() {
+      var count = selected.size;
+      var cents = Math.round(Number(amountEl.value) * 100);
+      if (!count) { summary.textContent = "未分摊"; return; }
+      var label = "已选 " + count + " 人";
+      if (cents > 0 && amountEl.validity.valid) {
+        var share = Math.floor(cents / count);
+        var remainder = cents % count;
+        label += " · 每人" + (typeEl.value === "income" ? "增加" : "扣除") +
+          " ¥" + BF.fmt(share / 100) + (remainder ? "–¥" + BF.fmt((share + 1) / 100) : "");
+      }
+      summary.textContent = label;
+    }
+    function renderMembers() {
+      var matching = matchingNames();
+      list.innerHTML = matching.length ? matching.map(function (name) {
+        return '<label class="bf-member"><input type="checkbox" value="' + esc(name) + '"' +
+          (selected.has(name) ? " checked" : "") + (!available.has(name) && !selected.has(name) ? " disabled" : "") +
+          '><span>' + esc(name) + (available.has(name) ? "" : "（历史成员）") + "</span></label>";
+      }).join("") : '<span class="muted">没有匹配的成员</span>';
+      all.disabled = !matching.some(function (name) { return available.has(name); });
+      none.disabled = !selected.size;
+      updateSummary();
+    }
+    filter.addEventListener("input", renderMembers);
+    amountEl.addEventListener("input", updateSummary);
+    typeEl.addEventListener("change", updateSummary);
+    list.addEventListener("change", function (event) {
+      var box = event.target;
+      if (box.type !== "checkbox") return;
+      if (box.checked) selected.add(box.value);
+      else selected.delete(box.value);
+      if (!available.has(box.value)) box.disabled = true;
+      none.disabled = !selected.size;
+      updateSummary();
+    });
+    all.addEventListener("click", function () {
+      matchingNames().forEach(function (name) { if (available.has(name)) selected.add(name); });
+      renderMembers();
+    });
+    none.addEventListener("click", function () { selected.clear(); renderMembers(); });
+    BF.memberRoster().then(function (roster) {
+      if (!save.isConnected) return;
+      if (rec && !Array.isArray(rec.members)) throw new Error("暂时无法核对已有分摊，请刷新后重试");
+      available = new Set(roster.filter(function (row) { return row.active !== false; })
+        .map(function (row) { return row.username; }));
+      names = Array.from(new Set(Array.from(available).concat(Array.from(selected))))
+        .sort(function (a, b) { return a.localeCompare(b, "zh-CN"); });
+      save.disabled = filter.disabled = false;
+      renderMembers();
+    }).catch(function (error) { if (save.isConnected) list.textContent = error.message || "读取名单失败"; });
+
+    save.addEventListener("click", function () {
       var item = document.getElementById("rec-item").value.trim();
-      var amount = parseFloat(document.getElementById("rec-amount").value);
-      var err = document.getElementById("rec-err");
-      if (!item || !amount || amount <= 0) { if (err) err.textContent = "请填写事项名称与有效金额"; return; }
+      var amount = Number(amountEl.value);
+      if (!item || !amount || !amountEl.validity.valid) {
+        err.textContent = "请填写事项名称和有效的两位小数金额";
+        return;
+      }
       var patch = {
-        type: typeEl.value, cat: catEl.value, item: item, amount: amount,
+        id: pendingId, type: typeEl.value, cat: catEl.value, item: item, amount: amount,
         date: document.getElementById("rec-date").value || BF.todayISO(),
         note: document.getElementById("rec-note").value.trim(),
         by: "管理员", _upd: new Date().toISOString()
       };
-      if (recEditId) {
-        var updated = BF.updateRecord(recEditId, patch);
-        if (!updated) { if (err) err.textContent = "记录已不存在，请刷新"; return; }
-        BF.markRecordDirty(recEditId);
-        toast("记录已修改并同步云端");
-      } else {
-        var nr = BF.addRecord(Object.assign({ id: BF.uid() }, patch));
-        BF.markRecordDirty(nr.id);
-        toast("记录已添加并同步公示");
-      }
-      recEditId = null;
-      BF.save(); BF.pushCloud(); AppUI.closeModal(); refresh();
+      save.disabled = true;
+      err.textContent = "正在保存…";
+      BF.writeRecord(pendingId, patch, Array.from(selected), rec).then(function () {
+        if (save.isConnected) AppUI.closeModal();
+        toast(rec ? "记录已修改" : "记录已公示");
+      }).catch(function (error) {
+        if (!save.isConnected) return;
+        save.disabled = false;
+        err.textContent = recordError(error);
+      });
     });
+  }
+
+  function recordError(error) {
+    if (error.message === "stale_record") return "这条记录已被更新，请刷新后重新操作。";
+    if (error.message === "invalid_members") return "所选成员中有账户已停用，请核对名单。";
+    return "云端保存失败，请重试。";
   }
 
   /* 公告编辑 */
@@ -5584,17 +5573,27 @@ document.addEventListener('keydown', e => {
   function confirmDelete(id) {
     var r = BF.records.find(function (x) { return String(x.id) === String(id); });
     if (!r) return;
+    if (!Array.isArray(r.members)) { toast("暂时无法核对已有分摊，请刷新后重试", "warn"); return; }
     openModal("<h3>删除该记录？</h3>" +
       '<p class="muted" style="margin-top:6px">「' + esc(r.item) + "」±¥" + BF.fmt(r.amount) +
       " · " + esc(r.date || "—") + "</p>" +
+      (r.members.length ? '<p class="muted">将同时撤销这笔对 ' + r.members.length + ' 人的分摊。</p>' : "") +
+      '<div id="del-err" class="auth-err" role="status"></div>' +
       '<div class="row" style="justify-content:flex-end;gap:8px;margin-top:18px">' +
       '<button class="btn" onclick="AppUI.closeModal()">取消</button>' +
       '<button class="btn btn-danger" id="del-ok">确认删除</button></div>');
     var ok = document.getElementById("del-ok");
     if (ok) ok.addEventListener("click", function () {
-      BF.removeRecord(String(id));
-      BF.save(); BF.pushCloud(true); AppUI.closeModal(); refresh();
-      toast("记录已删除");
+      var errorBox = document.getElementById("del-err");
+      ok.disabled = true;
+      BF.writeRecord(r.id, null, [], r).then(function () {
+        if (ok.isConnected) AppUI.closeModal();
+        toast("记录已删除");
+      }).catch(function (error) {
+        if (!ok.isConnected) return;
+        ok.disabled = false;
+        errorBox.textContent = recordError(error);
+      });
     });
   }
 
